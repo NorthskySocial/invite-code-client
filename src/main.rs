@@ -1,6 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use egui::Widget;
 use egui_extras::{Column, TableBuilder};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
@@ -18,7 +17,6 @@ const GET_INVITE_CODES: &str = "/xrpc/com.atproto.admin.getInviteCodes";
 const DISABLE_INVITE_CODES: &str = "/xrpc/com.atproto.admin.disableInviteCodes";
 const CREATE_INVITE_CODE: &str = "/xrpc/com.atproto.admin.server.createInviteCode";
 const CREATE_INVITE_CODES: &str = "/xrpc/com.atproto.admin.server.createInviteCodes";
-
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -42,10 +40,14 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
 
+
     eframe::run_native(
         "Invite Code Manager",
         options,
-        Box::new(|cc| Ok(Box::<InviteCodeManager>::default())),
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::<InviteCodeManager>::default())
+        }),
     )
 }
 
@@ -58,7 +60,13 @@ struct InviteCodeManager {
     codes_tx: Sender<InviteCodes>,
     codes_rx: Receiver<InviteCodes>,
 
+    // Sender/Receiver for otp code.
+    qr_tx: Sender<String>,
+    qr_rx: Receiver<String>,
+
     qr_code: Option<QrCode>,
+    otp_code: String,
+    x: Vec<u8>,
 
     // Silly app state.
     value: u32,
@@ -74,17 +82,22 @@ impl Default for InviteCodeManager {
     fn default() -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
         let (codes_tx, codes_rx) = std::sync::mpsc::channel();
+        let (qr_tx, qr_rx) = std::sync::mpsc::channel();
         Self {
             tx,
             rx,
             codes_rx,
             codes_tx,
+            qr_rx,
+            qr_tx,
             value: 1,
             count: 0,
             codes: vec![],
             filtered_codes: vec![],
             search_term: "".to_string(),
             qr_code: None,
+            otp_code: "".to_string(),
+            x: vec![],
         }
     }
 }
@@ -95,11 +108,27 @@ impl eframe::App for InviteCodeManager {
             match &self.qr_code {
                 None => {}
                 Some(qr_code) => {
-                    let x = egui::Image::from_bytes(
-                        "bytes://".to_string() + "test",
-                        qr_code.image.clone(),
+                    let totp = TOTP::new(
+                        Algorithm::SHA1,
+                        6,
+                        1,
+                        30,
+                        Secret::Encoded("KRSXG5CTMVRXEZLUKN2XAZLSKNSWG4TFOQ".to_string())
+                            .to_bytes()
+                            .unwrap(),
+                        Some("Northsky".to_string()),
+                        "Northsky".to_string(),
+                    )
+                    .unwrap();
+                    let qr_code = totp.get_qr_png().unwrap();
+                    self.x = qr_code.clone();
+                    ui.add(
+                        egui::Image::from_bytes("bytes://test.png", qr_code).max_height(200f32).max_width(200f32)
                     );
-                    egui::Image::ui.add(x);
+                    ui.horizontal(|ui| {
+                        ui.label("Please enter code:");
+                        ui.text_edit_singleline(&mut self.otp_code)
+                    });
                 }
             }
             let res = self.codes_rx.try_recv();
@@ -222,9 +251,12 @@ pub struct Code {
     pub code: String,
     pub available: i32,
     pub disabled: bool,
-    pub forAccount: String,
-    pub createdBy: String,
-    pub createdAt: String,
+    #[serde(rename = "forAccount")]
+    pub for_account: String,
+    #[serde(rename = "createdBy")]
+    pub created_by: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: String,
     pub uses: Vec<Use>,
 }
 
@@ -244,10 +276,7 @@ fn get_invite_codes(
         let res = client
             .get("https://pds.ripperoni.com".to_string() + GET_INVITE_CODES)
             .header("Content-Type", "application/json")
-            .header(
-                "Authorization",
-                "Basic dnlndlanwdln=",
-            )
+            .header("Authorization", "Basic dnlndlanwdln=")
             .send()
             .await
             .unwrap();
@@ -279,10 +308,7 @@ fn create_invite_code(
         let res = client
             .get("https://pds.ripperoni.com".to_string() + GET_INVITE_CODES)
             .header("Content-Type", "application/json")
-            .header(
-                "Authorization",
-                "Basic dnlndlanwdln=",
-            )
+            .basic_auth("admin", Some("password"))
             .send()
             .await
             .unwrap();
@@ -313,4 +339,14 @@ fn filter_invites(app: &mut InviteCodeManager) {
     }
 }
 
-fn generate_qr_code() {}
+fn login() {
+
+}
+
+fn verify_otp() {
+
+}
+
+fn valid_otp() {
+
+}
