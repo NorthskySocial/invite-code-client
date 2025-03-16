@@ -52,6 +52,8 @@ fn main() -> eframe::Result {
 }
 
 struct InviteCodeManager {
+    invite_backend: Option<String>,
+
     // Sender/Receiver for async notifications.
     tx: Sender<u32>,
     rx: Receiver<u32>,
@@ -84,6 +86,7 @@ impl Default for InviteCodeManager {
         let (codes_tx, codes_rx) = std::sync::mpsc::channel();
         let (qr_tx, qr_rx) = std::sync::mpsc::channel();
         Self {
+            invite_backend: None,
             tx,
             rx,
             codes_rx,
@@ -219,7 +222,7 @@ impl eframe::App for InviteCodeManager {
                                         ui.label("");
                                     } else {
                                         let uses = binding.get(0).clone().unwrap();
-                                        ui.label(uses.usedBy.as_str());
+                                        ui.label(uses.used_by.as_str());
                                     }
                                 });
                                 row.col(|ui| {
@@ -228,7 +231,7 @@ impl eframe::App for InviteCodeManager {
                                         ui.label("");
                                     } else {
                                         let uses = binding.get(0).clone().unwrap();
-                                        ui.label(uses.usedAt.as_str());
+                                        ui.label(uses.used_at.as_str());
                                     }
                                 });
                                 row.col(|ui| if ui.button("Disable").clicked() {});
@@ -242,8 +245,10 @@ impl eframe::App for InviteCodeManager {
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Use {
-    pub usedBy: String,
-    pub usedAt: String,
+    #[serde(rename = "usedBy")]
+    pub used_by: String,
+    #[serde(rename = "usedAt")]
+    pub used_at: String,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
