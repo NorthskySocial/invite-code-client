@@ -10,6 +10,8 @@ use std::time::Duration;
 use tokio::runtime::Runtime;
 use totp_rs::{Algorithm, Secret, TOTP};
 
+mod styles;
+
 enum Page {
     Home,
     Login,
@@ -151,7 +153,14 @@ impl Default for InviteCodeManager {
 
 impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+        // Setup some application window properties through the `egui` frame.
+        let styled_frame = styles::get_styled_frame();
+
+        egui::CentralPanel::default().frame(styled_frame).show(ctx, |ui| {
+            // Basic window styling.
+            styles::set_text_color(ui);
+            styles::render_title(ui, styles::FRAME_TITLE);
+
             let res = self.page_rx.try_recv();
             if res.is_ok() {
                 self.page = res.unwrap();
@@ -274,6 +283,8 @@ impl eframe::App for InviteCodeManager {
                     }
                 }
                 Page::Login => {
+                    styles::render_subtitle(ui, "Login");
+
                     ui.horizontal(|ui| {
                         ui.label("Invite Manager Endpoint:");
                         ui.text_edit_singleline(&mut self.invite_backend);
