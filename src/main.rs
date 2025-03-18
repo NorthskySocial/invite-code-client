@@ -283,23 +283,18 @@ impl eframe::App for InviteCodeManager {
                     }
                 }
                 Page::Login => {
-                    styles::render_subtitle(ui, "Login");
+                    styles::render_subtitle(ui, "Login!");
 
-                    ui.horizontal(|ui| {
-                        ui.label("Invite Manager Endpoint:");
-                        ui.text_edit_singleline(&mut self.invite_backend);
+                    ui.vertical_centered(|ui| {
+                        styles::render_input(ui, "Invite Manager Endpoint", &mut self.invite_backend, false);
+                        styles::render_input(ui, "Username", &mut self.username, false);
+                        styles::render_input(ui, "Password", &mut self.password, true);
+
                     });
-                    ui.horizontal(|ui| {
-                        ui.label("Username:");
-                        ui.text_edit_singleline(&mut self.username);
-                    });
-                    ui.horizontal(|ui| {
-                        ui.label("Password:");
-                        ui.add(egui::TextEdit::singleline(&mut self.password).password(true));
-                    });
-                    if ui.button("Submit").clicked() {
+
+                    styles::render_button(ui, "Login", || {
                         login(self, self.page_tx.clone(), self.otp_tx.clone());
-                    }
+                    });
                 }
                 Page::QrVerify => {
                     ui.add(
