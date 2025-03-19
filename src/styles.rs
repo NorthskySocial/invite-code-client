@@ -10,10 +10,10 @@ const FRAME_MARGIN: f32 = 50.0;
 const INPUT_CORNER_RADIUS: u8 = 6;
 
 /// Background color for the UI.
-const FRAME_BG_COLOR: egui::Color32 = egui::Color32::from_rgb(222, 229, 229);
+const FRAME_BG_COLOR: egui::Color32 = egui::Color32::from_rgb(250, 250, 250);
 
 /// Text color for the UI.
-const FRAME_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(25, 9, 42);
+const FRAME_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(31, 11, 53);
 
 /// Size of the title text.
 const TITLE_SIZE: f32 = 36.0;
@@ -30,11 +30,31 @@ const INPUT_WIDTH: f32 = 200.0;
 /// Base measure to be used for different spacing calculations in the UI.
 const WIDGET_SPACING_BASE: f32 = 5.0;
 
+/// Font name for the main UI font.
+const MAIN_FONT_NAME: &str = "Geist";
+
 /// Returns a frame with styles applied to be used as the main application frame.
 pub fn get_styled_frame() -> egui::Frame {
     egui::Frame::new()
         .inner_margin(egui::vec2(FRAME_MARGIN, FRAME_MARGIN))
         .fill(FRAME_BG_COLOR)
+}
+
+pub fn setup_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+
+    fonts.font_data.insert(
+        MAIN_FONT_NAME.to_owned(),
+        egui::FontData::from_static(include_bytes!("../assets/Geist-VariableFont_wght.ttf")).into(),
+    );
+
+    fonts
+        .families
+        .entry(egui::FontFamily::Proportional)
+        .or_default()
+        .insert(0, MAIN_FONT_NAME.to_owned());
+
+    ctx.set_fonts(fonts);
 }
 
 /// Sets the UI text color.
@@ -85,8 +105,7 @@ pub fn render_button(ui: &mut egui::Ui, label: &str, callback: impl FnOnce()) {
         let text_label = egui::RichText::new(label).color(FRAME_TEXT_COLOR);
         let button = egui::Button::new(text_label)
             .fill(BUTTON_BG_COLOR)
-            .corner_radius(CornerRadius::same(INPUT_CORNER_RADIUS))
-            .stroke(egui::Stroke::new(1.0, FRAME_TEXT_COLOR));
+            .corner_radius(CornerRadius::same(0));
 
         if ui.add(button).clicked() {
             callback();
