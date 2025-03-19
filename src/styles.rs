@@ -40,6 +40,7 @@ pub fn get_styled_frame() -> egui::Frame {
         .fill(FRAME_BG_COLOR)
 }
 
+/// Sets up the fonts for the application using the `egui` context.
 pub fn setup_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
 
