@@ -16,6 +16,8 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 use tokio::runtime::Runtime;
 
+mod styles;
+
 enum Page {
     Home(HomePage),
     Login(LoginPage),
@@ -58,6 +60,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            styles::setup_fonts(&cc.egui_ctx);
             Ok(Box::<InviteCodeManager>::default())
         }),
     )
@@ -90,7 +93,14 @@ impl Default for InviteCodeManager {
 
 impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+        // Setup some application window properties through the `egui` frame.
+        let styled_frame = styles::get_styled_frame();
+
+        egui::CentralPanel::default().frame(styled_frame).show(ctx, |ui| {
+            // Basic window styling.
+            styles::set_text_color(ui);
+            styles::render_title(ui, styles::FRAME_TITLE);
+
             let res = self.page_rx.try_recv();
             if res.is_ok() {
                 self.page = res.unwrap();

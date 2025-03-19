@@ -6,6 +6,8 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::Sender;
 
+use crate::styles;
+
 pub struct LoginPage {
     invite_backend: String,
     username: String,
@@ -26,21 +28,17 @@ impl LoginPage {
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Invite Manager Endpoint:");
-            ui.text_edit_singleline(&mut self.invite_backend);
+        styles::render_subtitle(ui, "Login!");
+
+        ui.vertical_centered(|ui| {
+            styles::render_input(ui, "Invite Manager Endpoint", &mut self.invite_backend, false);
+            styles::render_input(ui, "Username", &mut self.username, false);
+            styles::render_input(ui, "Password", &mut self.password, true);
         });
-        ui.horizontal(|ui| {
-            ui.label("Username:");
-            ui.text_edit_singleline(&mut self.username);
-        });
-        ui.horizontal(|ui| {
-            ui.label("Password:");
-            ui.add(egui::TextEdit::singleline(&mut self.password).password(true));
-        });
-        if ui.button("Submit").clicked() {
+
+        styles::render_button(ui, "Submit", || {
             self.login();
-        }
+        });
     }
 
     fn login(&mut self) {

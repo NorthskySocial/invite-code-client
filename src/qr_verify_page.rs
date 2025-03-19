@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use totp_rs::{Algorithm, Secret, TOTP};
 
+use crate::styles;
+
 #[derive(Serialize, Deserialize)]
 struct GenerateOtpResponse {
     pub base32: String,
@@ -86,11 +88,11 @@ impl QrVerifyPage {
             .max_width(200f32),
         );
         ui.horizontal(|ui| {
-            ui.label("Please enter code:");
-            ui.text_edit_singleline(&mut self.otp_code);
-            if ui.button("Submit").clicked() {
-                self.verify_otp();
-            }
+            styles::render_input(ui, "Please enter code", &mut self.otp_code, false);
+
+            styles::render_button(ui, "Submit", || {
+                self.generate_otp();
+            });
         });
     }
 

@@ -5,6 +5,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::Sender;
 
+use crate::styles;
+
 pub struct QrValidatePage {
     invite_backend: String,
     otp_code: String,
@@ -23,13 +25,13 @@ impl QrValidatePage {
     }
 
     pub fn show(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("2FA code:");
-            ui.text_edit_singleline(&mut self.otp_code);
-        });
-        if ui.button("Submit").clicked() {
+        styles::render_subtitle(ui, "Two Factor Authentication!");
+
+        styles::render_input(ui, "2FA code", &mut self.otp_code, false);
+
+        styles::render_button(ui, "Submit", || {
             self.validate_otp();
-        }
+        });
     }
 
     fn validate_otp(&mut self) {
