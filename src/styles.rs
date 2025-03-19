@@ -1,7 +1,7 @@
 use egui::{CornerRadius, RichText};
 
 /// Title of the application frame.
-pub const FRAME_TITLE: &str = "Northsky Invite Code Manager";
+pub const FRAME_TITLE: &str = "Invite Code Manager";
 
 /// Margin to be applied to the main frame of the application.
 const FRAME_MARGIN: f32 = 50.0;
