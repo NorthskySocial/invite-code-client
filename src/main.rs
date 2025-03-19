@@ -60,6 +60,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            styles::setup_fonts(&cc.egui_ctx);
             Ok(Box::<InviteCodeManager>::default())
         }),
     )
@@ -100,7 +101,6 @@ impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Setup some application window properties through the `egui` frame.
         let styled_frame = styles::get_styled_frame();
-        styles::setup_fonts(ctx);
 
         egui::CentralPanel::default().frame(styled_frame).show(ctx, |ui| {
             // Basic window styling.
