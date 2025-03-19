@@ -12,7 +12,7 @@ use crate::qr_verify_page::QrVerifyPage;
 use reqwest::Client;
 use reqwest::cookie::Jar;
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Receiver;
 use std::time::Duration;
 use tokio::runtime::Runtime;
 
@@ -65,10 +65,6 @@ fn main() -> eframe::Result {
 
 struct InviteCodeManager {
     page: Page,
-    invite_backend: String,
-
-    // Sender/Receiver for async page
-    page_tx: Sender<Page>,
     page_rx: Receiver<Page>,
 }
 
@@ -87,8 +83,6 @@ impl Default for InviteCodeManager {
                 client,
                 "https://pds.example.com".to_string(),
             )),
-            invite_backend: "https://pds.example.com".to_string(),
-            page_tx,
             page_rx,
         }
     }

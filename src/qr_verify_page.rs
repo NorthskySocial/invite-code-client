@@ -16,7 +16,6 @@ pub struct QrVerifyPage {
     client: Client,
     invite_backend: String,
     otp_code: String,
-    base32: String,
     page_tx: Sender<Page>,
     qr_tx: Sender<(String, String)>,
     qr_rx: Receiver<(String, String)>,
@@ -26,16 +25,17 @@ pub struct QrVerifyPage {
 impl QrVerifyPage {
     pub fn new(client: Client, page_tx: Sender<Page>, invite_backend: String) -> Self {
         let (qr_tx, qr_rx) = std::sync::mpsc::channel();
-        Self {
+        let mut page = QrVerifyPage {
             client,
             invite_backend,
             otp_code: "".to_string(),
-            base32: "".to_string(),
             page_tx,
             qr_tx,
             qr_rx,
             qr_code: None,
-        }
+        };
+        page.generate_otp();
+        page
     }
 
     fn generate_otp(&mut self) {
