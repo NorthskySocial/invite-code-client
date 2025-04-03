@@ -4,7 +4,7 @@ use crate::{LOGIN, Page};
 use egui::Ui;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Receiver, Sender};
 
 use crate::styles;
 
@@ -45,13 +45,18 @@ impl LoginPage {
         }
 
         ui.vertical_centered(|ui| {
-            styles::render_input(ui, "Invite Manager Endpoint", &mut self.invite_backend, false);
+            styles::render_input(
+                ui,
+                "Invite Manager Endpoint",
+                &mut self.invite_backend,
+                false,
+            );
             styles::render_input(ui, "Username", &mut self.username, false);
             styles::render_input(ui, "Password", &mut self.password, true);
         });
 
         // Display current error message, if exists
-        if self.error_message != "" {
+        if !self.error_message.is_empty() {
             styles::render_error(ui, &self.error_message);
         }
 
@@ -113,7 +118,9 @@ impl LoginPage {
             };
 
             if !res.status().is_success() {
-                error_tx.send("Login failed. Please check your credentials and try again.".to_string()).unwrap();
+                error_tx
+                    .send("Login failed. Please check your credentials and try again.".to_string())
+                    .unwrap();
                 return;
             }
 

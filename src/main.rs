@@ -96,30 +96,32 @@ impl eframe::App for InviteCodeManager {
         // Setup some application window properties through the `egui` frame.
         let styled_frame = styles::get_styled_frame();
 
-        egui::CentralPanel::default().frame(styled_frame).show(ctx, |ui| {
-            // Basic window styling.
-            styles::set_text_color(ui);
-            styles::render_title(ui, styles::FRAME_TITLE);
+        egui::CentralPanel::default()
+            .frame(styled_frame)
+            .show(ctx, |ui| {
+                // Basic window styling.
+                styles::set_text_color(ui);
+                styles::render_title(ui, styles::FRAME_TITLE);
 
-            let res = self.page_rx.try_recv();
-            if res.is_ok() {
-                self.page = res.unwrap();
-            }
+                let res = self.page_rx.try_recv();
+                if res.is_ok() {
+                    self.page = res.unwrap();
+                }
 
-            match &mut self.page {
-                Page::Home(home_page) => {
-                    home_page.show(ui);
+                match &mut self.page {
+                    Page::Home(home_page) => {
+                        home_page.show(ui);
+                    }
+                    Page::Login(login_page) => {
+                        login_page.show(ui);
+                    }
+                    Page::QrVerify(verify_page) => {
+                        verify_page.show(ui);
+                    }
+                    Page::QrValidate(validate_page) => {
+                        validate_page.show(ui);
+                    }
                 }
-                Page::Login(login_page) => {
-                    login_page.show(ui);
-                }
-                Page::QrVerify(verify_page) => {
-                    verify_page.show(ui);
-                }
-                Page::QrValidate(validate_page) => {
-                    validate_page.show(ui);
-                }
-            }
-        });
+            });
     }
 }

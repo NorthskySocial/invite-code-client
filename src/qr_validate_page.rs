@@ -3,7 +3,7 @@ use crate::{Page, VALIDATE_OTP};
 use egui::Ui;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Receiver, Sender};
 
 use crate::styles;
 
@@ -43,7 +43,7 @@ impl QrValidatePage {
         styles::render_input(ui, "2FA code", &mut self.otp_code, false);
 
         // Display current error message, if exists
-        if self.error_message != "" {
+        if !self.error_message.is_empty() {
             styles::render_error(ui, &self.error_message);
         }
 
@@ -60,7 +60,9 @@ impl QrValidatePage {
 
         // Validation
         if self.otp_code.is_empty() {
-            error_tx.send("Please enter a 2FA code.".to_string()).unwrap();
+            error_tx
+                .send("Please enter a 2FA code.".to_string())
+                .unwrap();
             return;
         }
 

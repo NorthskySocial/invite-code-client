@@ -108,7 +108,7 @@ pub fn render_button(ui: &mut egui::Ui, label: &str, callback: impl FnOnce()) {
     ui.add_space(WIDGET_SPACING_BASE);
 
     ui.vertical_centered(|ui| {
-            render_unaligned_button(ui, label, callback);
+        render_unaligned_button(ui, label, callback);
     });
 
     ui.add_space(WIDGET_SPACING_BASE);
@@ -116,7 +116,7 @@ pub fn render_button(ui: &mut egui::Ui, label: &str, callback: impl FnOnce()) {
 
 pub fn render_unaligned_button(ui: &mut egui::Ui, label: &str, callback: impl FnOnce()) {
     ui.spacing_mut().button_padding =
-            egui::vec2(4.0 * WIDGET_SPACING_BASE, 2.0 * WIDGET_SPACING_BASE);
+        egui::vec2(4.0 * WIDGET_SPACING_BASE, 2.0 * WIDGET_SPACING_BASE);
 
     let text_label = egui::RichText::new(label).color(FRAME_TEXT_COLOR);
     let button = egui::Button::new(text_label)

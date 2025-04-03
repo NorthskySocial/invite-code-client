@@ -107,12 +107,16 @@ impl QrVerifyPage {
                 .max_width(200f32),
             );
 
-            styles::render_input(ui, "To confirm, enter a generated 2FA code", &mut self.otp_code, false);
-
+            styles::render_input(
+                ui,
+                "To confirm, enter a generated 2FA code",
+                &mut self.otp_code,
+                false,
+            );
         });
 
         // Display current error message, if exists
-        if self.error_message != "" {
+        if !self.error_message.is_empty() {
             styles::render_error(ui, &self.error_message);
         }
 
@@ -129,7 +133,9 @@ impl QrVerifyPage {
 
         // Validation
         if self.otp_code.is_empty() {
-            error_tx.send("Please enter a 2FA code.".to_string()).unwrap();
+            error_tx
+                .send("Please enter a 2FA code.".to_string())
+                .unwrap();
             return;
         }
 
@@ -148,7 +154,10 @@ impl QrVerifyPage {
                 .unwrap();
             if !res.status().is_success() {
                 error_tx
-                    .send("An error occured trying to verify your code. Please, try again.".to_string())
+                    .send(
+                        "An error occured trying to verify your code. Please, try again."
+                            .to_string(),
+                    )
                     .unwrap();
                 eprintln!("Verify OTP not successful");
                 return;

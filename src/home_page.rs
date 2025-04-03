@@ -1,4 +1,4 @@
-use crate::{styles, CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GET_INVITE_CODES};
+use crate::{CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GET_INVITE_CODES, styles};
 use egui::Ui;
 use egui_extras::{Column, TableBuilder};
 use reqwest::Client;
@@ -51,7 +51,14 @@ impl HomePage {
             });
             ui.vertical(|ui| {
                 ui.label("Filter:");
-                if ui.add(styles::render_base_input(&mut self.search_term, false, true)).changed() {
+                if ui
+                    .add(styles::render_base_input(
+                        &mut self.search_term,
+                        false,
+                        true,
+                    ))
+                    .changed()
+                {
                     self.filter_invites();
                 }
             });
