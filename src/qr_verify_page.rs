@@ -22,11 +22,16 @@ pub struct QrVerifyPage {
     qr_tx: Sender<(String, String)>,
     qr_rx: Receiver<(String, String)>,
     qr_code: Option<QrCodeBase>,
+    error_tx: Sender<String>,
+    error_rx: Receiver<String>,
+    error_message: String,
 }
 
 impl QrVerifyPage {
     pub fn new(client: Client, page_tx: Sender<Page>, invite_backend: String) -> Self {
         let (qr_tx, qr_rx) = std::sync::mpsc::channel();
+        let (error_tx, error_rx) = std::sync::mpsc::channel();
+
         let mut page = QrVerifyPage {
             client,
             invite_backend,
@@ -35,6 +40,9 @@ impl QrVerifyPage {
             qr_tx,
             qr_rx,
             qr_code: None,
+            error_tx,
+            error_rx,
+            error_message: "".to_string(),
         };
         page.generate_otp();
         page
@@ -79,24 +87,58 @@ impl QrVerifyPage {
                 url: res.1,
             });
         }
-        ui.add(
-            egui::Image::from_bytes(
-                "bytes://test.png",
-                self.qr_code.clone().unwrap().image.clone(),
-            )
-            .max_height(200f32)
-            .max_width(200f32),
-        );
-        ui.horizontal(|ui| {
-            styles::render_input(ui, "Please enter code", &mut self.otp_code, false);
 
-            styles::render_button(ui, "Submit", || {
-                self.generate_otp();
-            });
+        styles::render_subtitle(ui, "Two Factor Authentication Setup!");
+
+        // Check for new error messages
+        if let Ok(error_message) = self.error_rx.try_recv() {
+            self.error_message = error_message;
+        }
+
+        ui.vertical_centered(|ui| {
+            ui.label("Scan the QR code with your 2FA app");
+
+            ui.add(
+                egui::Image::from_bytes(
+                    "bytes://test.png",
+                    self.qr_code.clone().unwrap().image.clone(),
+                )
+                .max_height(200f32)
+                .max_width(200f32),
+            );
+
+            styles::render_input(
+                ui,
+                "To confirm, enter a generated 2FA code",
+                &mut self.otp_code,
+                false,
+            );
+        });
+
+        // Display current error message, if exists
+        if !self.error_message.is_empty() {
+            styles::render_error(ui, &self.error_message);
+        }
+
+        styles::render_button(ui, "Submit", || {
+            self.verify_otp();
         });
     }
 
     fn verify_otp(&mut self) {
+        let error_tx = self.error_tx.clone();
+
+        // Clearing error messages
+        error_tx.send("".to_string()).unwrap();
+
+        // Validation
+        if self.otp_code.is_empty() {
+            error_tx
+                .send("Please enter a 2FA code.".to_string())
+                .unwrap();
+            return;
+        }
+
         let endpoint = self.invite_backend.clone() + VERIFY_OTP;
         let client = self.client.clone();
         let token = self.otp_code.clone();
@@ -111,7 +153,14 @@ impl QrVerifyPage {
                 .await
                 .unwrap();
             if !res.status().is_success() {
-                panic!("not success")
+                error_tx
+                    .send(
+                        "An error occured trying to verify your code. Please, try again."
+                            .to_string(),
+                    )
+                    .unwrap();
+                eprintln!("Verify OTP not successful");
+                return;
             }
             page_tx
                 .send(Page::Home(HomePage::new(client, invite_backend)))

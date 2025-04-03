@@ -1,4 +1,4 @@
-use crate::{CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GET_INVITE_CODES};
+use crate::{CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GET_INVITE_CODES, styles};
 use egui::Ui;
 use egui_extras::{Column, TableBuilder};
 use reqwest::Client;
@@ -46,15 +46,25 @@ impl HomePage {
         }
 
         ui.horizontal(|ui| {
-            if ui.button("Get Invite Codes").clicked() {
+            styles::render_unaligned_button(ui, "Get Invite Codes", || {
                 self.get_invite_codes();
-            }
-            if ui.text_edit_singleline(&mut self.search_term).changed() {
-                self.filter_invites();
-            }
-            if ui.button("Create Invite Code").clicked() {
+            });
+            ui.vertical(|ui| {
+                ui.label("Filter:");
+                if ui
+                    .add(styles::render_base_input(
+                        &mut self.search_term,
+                        false,
+                        true,
+                    ))
+                    .changed()
+                {
+                    self.filter_invites();
+                }
+            });
+            styles::render_unaligned_button(ui, "Create Invite Code", || {
                 self.create_invite_code();
-            }
+            });
         });
 
         if !self.filtered_codes.is_empty() {
