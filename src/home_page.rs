@@ -64,6 +64,7 @@ impl HomePage {
             });
             styles::render_unaligned_button(ui, "Create Invite Code", || {
                 self.create_invite_code();
+                self.get_invite_codes();
             });
         });
 
