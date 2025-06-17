@@ -1,3 +1,4 @@
+use eframe::egui;
 use egui::{CornerRadius, RichText};
 
 /// Title of the application frame.

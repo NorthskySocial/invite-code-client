@@ -1,12 +1,13 @@
 use crate::qr_validate_page::QrValidatePage;
 use crate::qr_verify_page::QrVerifyPage;
 use crate::{LOGIN, Page};
-use egui::Ui;
+use eframe::egui::Ui;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 
 use crate::styles;
+use crate::util::create_task;
 
 pub struct LoginPage {
     invite_backend: String,
@@ -101,7 +102,7 @@ impl LoginPage {
         let page_tx = self.page_tx.clone();
         let invite_backend = self.invite_backend.clone();
 
-        tokio::spawn(async move {
+        create_task(async move {
             let res = match client
                 .post(login_endpoint)
                 .header("Content-Type", "application/json")

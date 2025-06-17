@@ -1,12 +1,13 @@
 use crate::home_page::HomePage;
 use crate::{GENERATE_OTP, Page, VERIFY_OTP};
-use egui::Ui;
+use eframe::egui::{Image, Ui};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 use totp_rs::{Algorithm, Secret, TOTP};
 
 use crate::styles;
+use crate::util::create_task;
 
 #[derive(Serialize, Deserialize)]
 struct GenerateOtpResponse {
@@ -52,7 +53,24 @@ impl QrVerifyPage {
         let otp_generate_endpoint = self.invite_backend.clone() + GENERATE_OTP;
         let client = self.client.clone();
         let qr_tx = self.qr_tx.clone();
+
+        #[cfg(not(target_arch = "wasm32"))]
         tokio::spawn(async move {
+            let res = client
+                .post(otp_generate_endpoint)
+                .header("Content-Type", "application/json")
+                .send()
+                .await
+                .unwrap();
+            if !res.status().is_success() {
+                panic!("not success")
+            }
+            let res = res.json::<GenerateOtpResponse>().await.unwrap();
+            qr_tx.send((res.base32, res.otpauth_url)).unwrap();
+        });
+
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move {
             let res = client
                 .post(otp_generate_endpoint)
                 .header("Content-Type", "application/json")
@@ -99,7 +117,7 @@ impl QrVerifyPage {
             ui.label("Scan the QR code with your 2FA app");
 
             ui.add(
-                egui::Image::from_bytes(
+                Image::from_bytes(
                     "bytes://test.png",
                     self.qr_code.clone().unwrap().image.clone(),
                 )
@@ -144,7 +162,8 @@ impl QrVerifyPage {
         let token = self.otp_code.clone();
         let page_tx = self.page_tx.clone();
         let invite_backend = self.invite_backend.clone();
-        tokio::spawn(async move {
+
+        create_task(async move {
             let res = client
                 .post(endpoint)
                 .header("Content-Type", "application/json")

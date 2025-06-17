@@ -1,5 +1,6 @@
+use crate::util::create_task;
 use crate::{CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GET_INVITE_CODES, styles};
-use egui::Ui;
+use eframe::egui::Ui;
 use egui_extras::{Column, TableBuilder};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -147,7 +148,8 @@ impl HomePage {
         let endpoint = self.invite_backend.clone() + GET_INVITE_CODES;
         let client = self.client.clone();
         let invite_code_tx = self.invite_code_tx.clone();
-        tokio::spawn(async move {
+
+        create_task(async move {
             let res = client
                 .get(endpoint)
                 .header("Content-Type", "application/json")
@@ -186,7 +188,8 @@ impl HomePage {
             codes: vec![code],
             accounts: vec![],
         };
-        tokio::spawn(async move {
+
+        create_task(async move {
             let res = client
                 .post(endpoint)
                 .header("Content-Type", "application/json")
@@ -207,7 +210,8 @@ impl HomePage {
             code_count: 1,
             use_count: 1,
         };
-        tokio::spawn(async move {
+
+        create_task(async move {
             let res = client
                 .post(endpoint)
                 .header("Content-Type", "application/json")

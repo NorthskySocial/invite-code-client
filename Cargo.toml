@@ -2,16 +2,31 @@
 name = "InviteCodeClient"
 version = "0.1.0"
 edition = "2024"
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
+license = "MIT"
 
 [dependencies]
-egui = { version = "0.31.0" }
 egui_extras = {  version = "0.31.1", features = ["default", "image"] }
 eframe = { version = "0.31.0", features = [
     "default",
     "__screenshot", # __screenshot is so we can dump a screenshot using EFRAME_SCREENSHOT_TO
 ] }
 env_logger = "0.11.7"
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "time"] }
 reqwest = { version = "0.12.14", features = ["json", "cookies"] }
 serde = { version = "1.0.219", features = ["derive"] }
 totp-rs = { version = "5.6.0" , features = ["qr"]}
+log = "0.4.26"
+
+# native:
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11.8"
+tokio = { version = "1.40.0", features = ["rt-multi-thread", "time"] }
+
+# web:
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.50"
+web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
+tokio = { version = "1.40.0", features = ["rt", "time"] }

@@ -1,11 +1,12 @@
 use crate::home_page::HomePage;
 use crate::{Page, VALIDATE_OTP};
-use egui::Ui;
+use eframe::egui::Ui;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{Receiver, Sender};
 
 use crate::styles;
+use crate::util::create_task;
 
 pub struct QrValidatePage {
     invite_backend: String,
@@ -72,7 +73,7 @@ impl QrValidatePage {
         let client = self.client.clone();
         let invite_backend = self.invite_backend.clone();
 
-        tokio::spawn(async move {
+        create_task(async move {
             let res = client
                 .post(endpoint)
                 .header("Content-Type", "application/json")
