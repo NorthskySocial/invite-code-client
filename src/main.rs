@@ -1,34 +1,20 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-mod home_page;
-mod login_page;
-mod qr_validate_page;
-mod qr_verify_page;
-
-use crate::home_page::HomePage;
-use crate::login_page::LoginPage;
-use crate::qr_validate_page::QrValidatePage;
-use crate::qr_verify_page::QrVerifyPage;
+use crate::app::InviteCodeManager;
 use eframe::egui;
-use reqwest::Client;
-#[cfg(not(target_arch = "wasm32"))]
-use reqwest::cookie::Jar;
-#[cfg(not(target_arch = "wasm32"))]
-use std::sync::Arc;
-use std::sync::mpsc::Receiver;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::runtime::Runtime;
 
+mod app;
 mod styles;
 mod util;
 
 enum Page {
-    Home(HomePage),
-    Login(LoginPage),
-    QrVerify(QrVerifyPage),
-    QrValidate(QrValidatePage),
+    Home,
+    Login,
+    QrVerify,
+    QrValidate,
 }
 
 const LOGIN: &str = "/api/auth/login";
@@ -59,18 +45,16 @@ fn main() -> eframe::Result {
     });
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default(),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([400.0, 300.0])
+            .with_min_inner_size([300.0, 220.0]),
         ..Default::default()
     };
 
     eframe::run_native(
         "Invite Code Manager",
         options,
-        Box::new(|cc| {
-            egui_extras::install_image_loaders(&cc.egui_ctx);
-            styles::setup_fonts(&cc.egui_ctx);
-            Ok(Box::<InviteCodeManager>::default())
-        }),
+        Box::new(|cc| Ok(Box::new(InviteCodeManager::new(cc)))),
     )
 }
 
@@ -122,79 +106,4 @@ fn main() {
             }
         }
     });
-}
-
-struct InviteCodeManager {
-    page: Page,
-    page_rx: Receiver<Page>,
-}
-
-impl Default for InviteCodeManager {
-    #[cfg(not(target_arch = "wasm32"))]
-    fn default() -> Self {
-        let (page_tx, page_rx) = std::sync::mpsc::channel();
-        let cookie_store = Arc::new(Jar::default());
-        let client = Client::builder()
-            .cookie_store(true)
-            .cookie_provider(cookie_store.clone())
-            .build()
-            .unwrap();
-        Self {
-            page: Page::Login(LoginPage::new(
-                page_tx.clone(),
-                client,
-                "https://invites.northsky.social".to_string(),
-            )),
-            page_rx,
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn default() -> Self {
-        let (page_tx, page_rx) = std::sync::mpsc::channel();
-        let client = Client::builder().build().unwrap();
-        Self {
-            page: Page::Login(LoginPage::new(
-                page_tx.clone(),
-                client,
-                "https://invites.northsky.social".to_string(),
-            )),
-            page_rx,
-        }
-    }
-}
-
-impl eframe::App for InviteCodeManager {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Setup some application window properties through the `egui` frame.
-        let styled_frame = styles::get_styled_frame();
-
-        egui::CentralPanel::default()
-            .frame(styled_frame)
-            .show(ctx, |ui| {
-                // Basic window styling.
-                styles::set_text_color(ui);
-                styles::render_title(ui, styles::FRAME_TITLE);
-
-                let res = self.page_rx.try_recv();
-                if res.is_ok() {
-                    self.page = res.unwrap();
-                }
-
-                match &mut self.page {
-                    Page::Home(home_page) => {
-                        home_page.show(ui);
-                    }
-                    Page::Login(login_page) => {
-                        login_page.show(ui);
-                    }
-                    Page::QrVerify(verify_page) => {
-                        verify_page.show(ui);
-                    }
-                    Page::QrValidate(validate_page) => {
-                        validate_page.show(ui);
-                    }
-                }
-            });
-    }
 }

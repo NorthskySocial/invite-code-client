@@ -1,3 +1,5 @@
+use std::future::Future;
+
 #[cfg(target_arch = "wasm32")]
 pub fn create_task<F>(future: F)
 where
