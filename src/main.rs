@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use crate::app::InviteCodeManager;
+#[cfg(not(target_arch = "wasm32"))]
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
@@ -44,10 +45,17 @@ fn main() -> eframe::Result {
         })
     });
 
+    let icon_data =
+        eframe::icon_data::from_png_bytes(include_bytes!("../assets/Northsky-Icon_Color.png"))
+            .expect("The icon data must be valid");
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([400.0, 300.0])
-            .with_min_inner_size([300.0, 220.0]),
+        viewport: {
+            egui::ViewportBuilder {
+                icon: Some(Arc::new(icon_data)),
+                ..Default::default()
+            }
+        },
         ..Default::default()
     };
 
@@ -62,7 +70,6 @@ fn main() -> eframe::Result {
 #[cfg(target_arch = "wasm32")]
 fn main() {
     use eframe::wasm_bindgen::JsCast as _;
-    // Redirect `log` message to `console.log` and friends:
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
     let web_options = eframe::WebOptions::default();
