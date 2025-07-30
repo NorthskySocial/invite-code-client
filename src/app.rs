@@ -500,14 +500,18 @@ impl InviteCodeManager {
         ui.vertical_centered(|ui| {
             ui.label("Scan the QR code with your 2FA app");
 
-            ui.add(
-                Image::from_bytes(
-                    "bytes://test.png",
-                    self.qr_code.clone().unwrap().image.clone(),
-                )
-                .max_height(200f32)
-                .max_width(200f32),
-            );
+            match self.qr_code.clone() {
+                Some(qr_code) => {
+                    ui.add(
+                        Image::from_bytes("bytes://test.png", qr_code.image.clone())
+                            .max_height(200f32)
+                            .max_width(200f32),
+                    );
+                }
+                None => {
+                    ui.label("Generating QR code...");
+                }
+            }
 
             styles::render_input(
                 ui,
