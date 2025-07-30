@@ -1,7 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use crate::app::InviteCodeManager;
 #[cfg(not(target_arch = "wasm32"))]
 use eframe::egui;
+use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
@@ -46,7 +48,7 @@ fn main() -> eframe::Result {
     });
 
     let icon_data =
-        eframe::icon_data::from_png_bytes(include_bytes!("../assets/Northsky-Icon_Color.png"))
+        eframe::icon_data::from_png_bytes(include_bytes!("../assets/apple-touch-icon.png"))
             .expect("The icon data must be valid");
 
     let options = eframe::NativeOptions {

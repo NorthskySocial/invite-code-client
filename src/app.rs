@@ -4,7 +4,7 @@ use crate::{
     VALIDATE_OTP, VERIFY_OTP, styles,
 };
 use eframe::egui;
-use eframe::egui::{Image, Ui};
+use eframe::egui::{Context, Image, Ui};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest::cookie::Jar;
@@ -112,7 +112,7 @@ impl eframe::App for InviteCodeManager {
         egui::CentralPanel::default().show(ctx, |ui| {
             // Basic window styling.
             styles::set_text_color(ui);
-            styles::render_title(ui, styles::FRAME_TITLE);
+            styles::render_title(ui, ctx, styles::FRAME_TITLE);
 
             let res = self.page_rx.try_recv();
             if res.is_ok() {
@@ -124,13 +124,13 @@ impl eframe::App for InviteCodeManager {
                     self.show_home(ui);
                 }
                 Page::Login => {
-                    self.show_login(ui);
+                    self.show_login(ui, ctx);
                 }
                 Page::QrVerify => {
-                    self.show_verify_qr(ui);
+                    self.show_verify_qr(ui, ctx);
                 }
                 Page::QrValidate => {
-                    self.show_validate_qr(ui);
+                    self.show_validate_qr(ui, ctx);
                 }
             }
         });
@@ -386,23 +386,25 @@ impl InviteCodeManager {
         });
     }
 
-    pub fn show_validate_qr(&mut self, ui: &mut Ui) {
-        styles::render_subtitle(ui, "Two Factor Authentication!");
+    pub fn show_validate_qr(&mut self, ui: &mut Ui, ctx: &Context) {
+        ui.vertical_centered(|ui| {
+            styles::render_subtitle(ui, ctx, "Two Factor Authentication!");
 
-        // Check for new error messages
-        if let Ok(error_message) = self.error_rx.try_recv() {
-            self.error_message = error_message;
-        }
+            // Check for new error messages
+            if let Ok(error_message) = self.error_rx.try_recv() {
+                self.error_message = error_message;
+            }
 
-        styles::render_input(ui, "2FA code", &mut self.otp_code, false);
+            styles::render_input(ui, "2FA code", &mut self.otp_code, false, None);
 
-        // Display current error message, if exists
-        if !self.error_message.is_empty() {
-            styles::render_error(ui, &self.error_message);
-        }
+            // Display current error message, if exists
+            if !self.error_message.is_empty() {
+                styles::render_error(ui, &self.error_message);
+            }
 
-        styles::render_button(ui, "Submit", || {
-            self.validate_otp();
+            styles::render_button(ui, ctx, "Submit", || {
+                self.validate_otp();
+            });
         });
     }
 
@@ -466,7 +468,7 @@ impl InviteCodeManager {
         });
     }
 
-    pub fn show_verify_qr(&mut self, ui: &mut Ui) {
+    pub fn show_verify_qr(&mut self, ui: &mut Ui, ctx: &Context) {
         self.generate_otp();
         let res = self.qr_rx.try_recv();
         if res.is_ok() {
@@ -488,7 +490,7 @@ impl InviteCodeManager {
             });
         }
 
-        styles::render_subtitle(ui, "Two Factor Authentication Setup!");
+        styles::render_subtitle(ui, ctx, "Two Factor Authentication Setup!");
 
         // Check for new error messages
         if let Ok(error_message) = self.error_rx.try_recv() {
@@ -512,16 +514,16 @@ impl InviteCodeManager {
                 "To confirm, enter a generated 2FA code",
                 &mut self.otp_code,
                 false,
+                None,
             );
-        });
+            // Display current error message, if exists
+            if !self.error_message.is_empty() {
+                styles::render_error(ui, &self.error_message);
+            }
 
-        // Display current error message, if exists
-        if !self.error_message.is_empty() {
-            styles::render_error(ui, &self.error_message);
-        }
-
-        styles::render_button(ui, "Submit", || {
-            self.verify_otp();
+            styles::render_button(ui, ctx, "Submit", || {
+                self.verify_otp();
+            });
         });
     }
 
@@ -564,8 +566,8 @@ impl InviteCodeManager {
         });
     }
 
-    pub fn show_login(&mut self, ui: &mut Ui) {
-        styles::render_subtitle(ui, "Login!");
+    pub fn show_login(&mut self, ui: &mut Ui, ctx: &Context) {
+        styles::render_subtitle(ui, ctx, "Login!");
 
         // Check for new error messages
         if let Ok(error_message) = self.error_rx.try_recv() {
@@ -578,18 +580,18 @@ impl InviteCodeManager {
                 "Invite Manager Endpoint",
                 &mut self.invite_backend,
                 false,
+                None,
             );
-            styles::render_input(ui, "Username", &mut self.username, false);
-            styles::render_input(ui, "Password", &mut self.password, true);
-        });
+            styles::render_input(ui, "Username", &mut self.username, false, None);
+            styles::render_input(ui, "Password", &mut self.password, true, None);
+            // Display current error message, if exists
+            if !self.error_message.is_empty() {
+                styles::render_error(ui, &self.error_message);
+            }
 
-        // Display current error message, if exists
-        if !self.error_message.is_empty() {
-            styles::render_error(ui, &self.error_message);
-        }
-
-        styles::render_button(ui, "Submit", || {
-            self.login();
+            styles::render_button(ui, ctx, "Submit", || {
+                self.login();
+            });
         });
     }
 

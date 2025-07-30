@@ -3,3 +3,5 @@
 
 ## Overview
 Frontend UI Client to interact with the Invite Code Manager
+
+![screenshot.png](assets/screenshot.png)
