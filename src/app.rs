@@ -149,6 +149,7 @@ impl eframe::App for InviteCodeManager {
 }
 
 impl InviteCodeManager {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         styles::setup_fonts(&cc.egui_ctx);
