@@ -114,9 +114,8 @@ impl eframe::App for InviteCodeManager {
             styles::set_text_color(ui);
             styles::render_title(ui, ctx, styles::FRAME_TITLE);
 
-            let res = self.page_rx.try_recv();
-            if res.is_ok() {
-                self.page = res.unwrap();
+            if let Ok(page) = self.page_rx.try_recv() {
+                self.page = page;
             }
 
             match &mut self.page {
@@ -471,15 +470,13 @@ impl InviteCodeManager {
 
     pub fn show_verify_qr(&mut self, ui: &mut Ui, ctx: &Context) {
         self.generate_otp();
-        let res = self.qr_rx.try_recv();
-        if res.is_ok() {
-            let res = res.unwrap();
+        if let Ok(qr) = self.qr_rx.try_recv() {
             let totp = TOTP::new(
                 Algorithm::SHA1,
                 6,
                 1,
                 30,
-                Secret::Encoded(res.0).to_bytes().unwrap(),
+                Secret::Encoded(qr.0).to_bytes().unwrap(),
                 Some("Northsky".to_string()),
                 "Northsky".to_string(),
             )
@@ -487,7 +484,7 @@ impl InviteCodeManager {
             let qr_code = totp.get_qr_png().unwrap();
             self.qr_code = Some(QrCodeBase {
                 image: qr_code,
-                url: res.1,
+                url: qr.1,
             });
         }
 
