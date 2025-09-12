@@ -16,6 +16,8 @@ RUN trunk build --release
 
 FROM nginx:mainline-alpine AS server
 
+COPY assets /usr/share/nginx/html/assets
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 LABEL org.opencontainers.image.source=https://github.com/NorthskySocial/invite-code-client
