@@ -81,7 +81,7 @@ pub fn render_input(
     ui.add_space(WIDGET_SPACING_BASE);
 }
 
-pub fn render_base_input(text: &mut String, is_password: bool, _use_frame: bool) -> egui::TextEdit {
+pub fn render_base_input(text: &mut String, is_password: bool, _use_frame: bool) -> egui::TextEdit<'_> {
     egui::TextEdit::singleline(text)
         .password(is_password)
         .desired_width(INPUT_WIDTH)
