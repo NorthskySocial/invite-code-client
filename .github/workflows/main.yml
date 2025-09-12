@@ -182,12 +182,6 @@ jobs:
 
       # For linux, it's necessary to use cross from the git repository to avoid glibc problems
       # Ref: https://github.com/cross-rs/cross/issues/1510
-      - name: Install dependencies for Linux
-        if: contains(matrix.TARGET, 'linux')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
-
       - name: Install cross for linux
         if: contains(matrix.TARGET, 'linux')
         run: |
