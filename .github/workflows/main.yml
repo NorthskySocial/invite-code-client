@@ -186,6 +186,13 @@ jobs:
         run: |
           cargo install cross --git https://github.com/cross-rs/cross --rev baf457efc2555225af47963475bd70e8d2f5993f
 
+      - name: Install dependencies for linux
+        if: contains(matrix.TARGET, 'linux')
+        run: |
+          sudo apt-get update
+          sudo apt-get upgrade -y
+          sudo apt-get install -y pkg-config libssl-dev
+
       - name: Install cross for mac and windows
         if: ${{ !contains(matrix.TARGET, 'linux') }}
         run: |
