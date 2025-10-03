@@ -38,6 +38,7 @@ pub struct InviteCodeManager {
     qr_rx: Receiver<(String, String)>,
     username: String,
     password: String,
+    generated_otp: bool,
 }
 
 impl Default for InviteCodeManager {
@@ -73,6 +74,7 @@ impl Default for InviteCodeManager {
             qr_rx,
             username: "".to_string(),
             password: "".to_string(),
+            generated_otp: false,
         }
     }
 
@@ -469,7 +471,11 @@ impl InviteCodeManager {
     }
 
     pub fn show_verify_qr(&mut self, ui: &mut Ui, ctx: &Context) {
-        self.generate_otp();
+        if !self.generated_otp {
+            self.generated_otp = true;
+            self.generate_otp();
+        }
+
         let res = self.qr_rx.try_recv();
         if res.is_ok() {
             let res = res.unwrap();

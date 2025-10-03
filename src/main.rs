@@ -20,13 +20,13 @@ enum Page {
     QrValidate,
 }
 
-const LOGIN: &str = "/api/auth/login";
-const GET_INVITE_CODES: &str = "/api/invite-codes";
-const GENERATE_OTP: &str = "/api/auth/otp/generate";
-const VALIDATE_OTP: &str = "/api/auth/otp/validate";
-const VERIFY_OTP: &str = "/api/auth/otp/verify";
-const CREATE_INVITE_CODES: &str = "/api/create-invite-codes";
-const DISABLE_INVITE_CODES: &str = "/api/disable-invite-codes";
+const LOGIN: &str = "/auth/login";
+const GET_INVITE_CODES: &str = "/invite-codes";
+const GENERATE_OTP: &str = "/auth/otp/generate";
+const VALIDATE_OTP: &str = "/auth/otp/validate";
+const VERIFY_OTP: &str = "/auth/otp/verify";
+const CREATE_INVITE_CODES: &str = "/create-invite-codes";
+const DISABLE_INVITE_CODES: &str = "/disable-invite-codes";
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
