@@ -21,18 +21,6 @@ const WIDGET_SPACING_BASE: f32 = 5.0;
 /// Font name for the main UI font.
 const MAIN_FONT_NAME: &str = "Geist";
 
-/// Margin to be applied to the main frame of the application.
-pub const FRAME_MARGIN: f32 = 50.0;
-
-/// Corner radius for the input fields.
-pub const INPUT_CORNER_RADIUS: u8 = 6;
-
-/// Background color for the UI.
-pub const FRAME_BG_COLOR: egui::Color32 = egui::Color32::from_rgb(250, 250, 250);
-
-/// Background color for the UI.
-pub const FRAME_BG_DARK_COLOR: egui::Color32 = egui::Color32::from_rgb(250, 250, 250);
-
 /// Text color for the UI.
 pub const FRAME_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(31, 11, 53);
 
@@ -93,7 +81,11 @@ pub fn render_input(
     ui.add_space(WIDGET_SPACING_BASE);
 }
 
-pub fn render_base_input(text: &mut String, is_password: bool, _use_frame: bool) -> egui::TextEdit {
+pub fn render_base_input(
+    text: &mut String,
+    is_password: bool,
+    _use_frame: bool,
+) -> egui::TextEdit<'_> {
     egui::TextEdit::singleline(text)
         .password(is_password)
         .desired_width(INPUT_WIDTH)
