@@ -15,6 +15,21 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use totp_rs::{Algorithm, Secret, TOTP};
 
+#[cfg(target_arch = "wasm32")]
+async fn read_clipboard_web() -> Option<String> {
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen_futures::JsFuture;
+
+    let window = web_sys::window()?;
+    let navigator = window.navigator();
+    let clipboard = navigator.clipboard();
+
+    match JsFuture::from(clipboard.read_text()).await {
+        Ok(js_value) => js_value.as_string(),
+        Err(_) => None,
+    }
+}
+
 pub struct InviteCodeManager {
     page: Page,
     page_tx: Sender<Page>,
@@ -105,6 +120,7 @@ impl Default for InviteCodeManager {
             qr_rx,
             username: "".to_string(),
             password: "".to_string(),
+            generated_otp: false,
         }
     }
 }
@@ -148,6 +164,12 @@ impl eframe::App for InviteCodeManager {
             });
         });
     }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct InviteCodes {
+    pub cursor: String,
+    pub codes: Vec<Code>,
 }
 
 impl InviteCodeManager {
@@ -470,14 +492,18 @@ impl InviteCodeManager {
         });
     }
 
+    #[tracing::instrument(skip(self, ui, ctx), fields(page = "QrVerify"))]
     pub fn show_verify_qr(&mut self, ui: &mut Ui, ctx: &Context) {
+        tracing::info!("show_verify_qr");
         if !self.generated_otp {
+            tracing::info!("Generating OTP");
             self.generated_otp = true;
             self.generate_otp();
         }
 
         let res = self.qr_rx.try_recv();
         if res.is_ok() {
+            tracing::info!("Got QR code");
             let res = res.unwrap();
             let totp = TOTP::new(
                 Algorithm::SHA1,
@@ -500,6 +526,7 @@ impl InviteCodeManager {
 
         // Check for new error messages
         if let Ok(error_message) = self.error_rx.try_recv() {
+            tracing::info!("Got error message");
             self.error_message = error_message;
         }
 
@@ -537,7 +564,9 @@ impl InviteCodeManager {
         });
     }
 
+    #[tracing::instrument(skip(self), fields(page = "QrVerify"))]
     fn verify_otp(&mut self) {
+        tracing::info!("verify_otp");
         let error_tx = self.error_tx.clone();
 
         // Clearing error messages
@@ -592,8 +621,100 @@ impl InviteCodeManager {
                 false,
                 None,
             );
-            styles::render_input(ui, "Username", &mut self.username, false, None);
-            styles::render_input(ui, "Password", &mut self.password, true, None);
+            ui.horizontal(|ui| {
+                styles::render_input(ui, "Username", &mut self.username, false, None);
+                if ui.button("📋 Paste").clicked() {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        // For web/mobile web
+                        let ctx = ui.ctx().clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            if let Some(text) = read_clipboard_web().await {
+                                ctx.data_mut(|d| {
+                                    d.insert_temp(egui::Id::new("username_paste_data"), text)
+                                });
+                                ctx.request_repaint();
+                            }
+                        });
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        if let Some(text) = ui.ctx().input(|i| {
+                            i.events.iter().find_map(|e| {
+                                if let egui::Event::Paste(s) = e {
+                                    Some(s.clone())
+                                } else {
+                                    None
+                                }
+                            })
+                        }) {
+                            println!("{:?}", text);
+                            self.username = text;
+                            ctx.request_repaint();
+                        }
+                    }
+                }
+            });
+            ui.horizontal(|ui| {
+                styles::render_input(ui, "Password", &mut self.password, true, None);
+                if ui.button("📋 Paste").clicked() {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        // For web/mobile web
+                        let ctx = ui.ctx().clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            if let Some(text) = read_clipboard_web().await {
+                                ctx.data_mut(|d| {
+                                    d.insert_temp(egui::Id::new("password_paste_data"), text)
+                                });
+                                ctx.request_repaint();
+                            }
+                        });
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        // For egui 0.28+, use:
+                        if let Some(text) = ui.ctx().input(|i| {
+                            i.events.iter().find_map(|e| {
+                                if let egui::Event::Paste(s) = e {
+                                    Some(s.clone())
+                                } else {
+                                    None
+                                }
+                            })
+                        }) {
+                            println!("{:?}", text);
+                            self.password = text;
+                            ctx.request_repaint();
+                        }
+                    }
+                }
+            });
+
+            #[cfg(target_arch = "wasm32")]
+            if let Some(text) = ui
+                .ctx()
+                .data(|d| d.get_temp::<String>(egui::Id::new("username_paste_data")))
+            {
+                self.username = text.clone();
+                ui.ctx()
+                    .data_mut(|d| d.remove::<String>(egui::Id::new("username_paste_data")));
+                ctx.request_repaint();
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            if let Some(text) = ui
+                .ctx()
+                .data(|d| d.get_temp::<String>(egui::Id::new("password_paste_data")))
+            {
+                self.password = text.clone();
+                ui.ctx()
+                    .data_mut(|d| d.remove::<String>(egui::Id::new("password_paste_data")));
+                ctx.request_repaint();
+            }
+
             // Display current error message, if exists
             if !self.error_message.is_empty() {
                 styles::render_error(ui, &self.error_message);
@@ -605,7 +726,9 @@ impl InviteCodeManager {
         });
     }
 
+    #[tracing::instrument(skip(self), fields(page = "Login"))]
     fn login(&mut self) {
+        tracing::info!("login");
         let error_tx = self.error_tx.clone();
 
         // Clearing error messages
@@ -642,6 +765,7 @@ impl InviteCodeManager {
         let error_tx = self.error_tx.clone();
 
         create_task(async move {
+            tracing::info!("Sending login request");
             let res = match client
                 .post(login_endpoint)
                 .header("Content-Type", "application/json")
@@ -671,12 +795,6 @@ impl InviteCodeManager {
             }
         });
     }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct InviteCodes {
-    pub cursor: String,
-    pub codes: Vec<Code>,
 }
 
 #[derive(Serialize, Deserialize)]

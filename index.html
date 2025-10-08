@@ -2,12 +2,16 @@
 <html>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
-<!-- Disable zooming: -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<!-- Allow controlled scaling for better mobile text input: -->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
 
 <head>
     <!-- change this to your project name -->
     <title>Invites Client</title>
+
+    <!-- Enable clipboard access for mobile browsers -->
+    <meta http-equiv="Permissions-Policy" content="clipboard-read=*, clipboard-write=*">
 
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     <link data-trunk rel="rust" data-wasm-opt="2" />
