@@ -14,8 +14,8 @@ dependencies = [
  "serde",
  "tokio",
  "totp-rs",
-    "tracing",
-    "wasm-bindgen",
+ "tracing",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
 ]
@@ -3717,7 +3717,7 @@ dependencies = [
  "once_cell",
  "rustversion",
  "wasm-bindgen-macro",
-    "wasm-bindgen-shared",
+ "wasm-bindgen-shared",
 ]
 
 [[package]]
