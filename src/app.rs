@@ -195,7 +195,7 @@ impl InviteCodeManager {
             .striped(true)
             .resizable(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .columns(Column::auto().resizable(true), 6)
+            .columns(Column::auto().resizable(true), 7)
             .min_scrolled_height(0.0)
             .max_scroll_height(available_height);
         table
