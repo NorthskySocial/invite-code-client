@@ -204,6 +204,9 @@ impl InviteCodeManager {
                     ui.heading("Code");
                 });
                 header.col(|ui| {
+                    ui.heading("Created At");
+                });
+                header.col(|ui| {
                     ui.heading("Used");
                 });
                 header.col(|ui| {
@@ -225,7 +228,10 @@ impl InviteCodeManager {
                         row.col(|ui| {
                             ui.label(code.code.as_str());
                         });
-                        row.col(|ui| match code.available > 0 {
+                        row.col(|ui| {
+                            ui.label(code.created_at.as_str());
+                        });
+                        row.col(|ui| match code.available < 1 || code.uses.len() > 0 {
                             true => {
                                 ui.label("y");
                             }
