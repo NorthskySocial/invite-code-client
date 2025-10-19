@@ -195,13 +195,16 @@ impl InviteCodeManager {
             .striped(true)
             .resizable(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .columns(Column::auto().resizable(true), 6)
+            .columns(Column::auto().resizable(true), 7)
             .min_scrolled_height(0.0)
             .max_scroll_height(available_height);
         table
             .header(20.0, |mut header| {
                 header.col(|ui| {
                     ui.heading("Code");
+                });
+                header.col(|ui| {
+                    ui.heading("Created At");
                 });
                 header.col(|ui| {
                     ui.heading("Used");
@@ -225,7 +228,10 @@ impl InviteCodeManager {
                         row.col(|ui| {
                             ui.label(code.code.as_str());
                         });
-                        row.col(|ui| match code.available > 0 {
+                        row.col(|ui| {
+                            ui.label(code.created_at.as_str());
+                        });
+                        row.col(|ui| match code.available < 1 || !code.uses.is_empty() {
                             true => {
                                 ui.label("y");
                             }
