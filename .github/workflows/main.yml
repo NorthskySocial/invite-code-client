@@ -106,7 +106,6 @@ jobs:
       - check_wasm
       - test
       - fmt
-      - clippy
       - trunk
     env:
       REGISTRY: ghcr.io
