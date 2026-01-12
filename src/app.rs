@@ -136,8 +136,8 @@ impl eframe::App for InviteCodeManager {
             styles::render_title(ui, ctx, styles::FRAME_TITLE);
 
             let res = self.page_rx.try_recv();
-            if res.is_ok() {
-                self.page = res.unwrap();
+            if let Ok(page) = res {
+                self.page = page;
             }
 
             match &mut self.page {
