@@ -54,6 +54,7 @@ pub struct InviteCodeManager {
     username: String,
     password: String,
     generated_otp: bool,
+    create_code_count_str: String,
 }
 
 impl Default for InviteCodeManager {
@@ -90,6 +91,7 @@ impl Default for InviteCodeManager {
             username: "".to_string(),
             password: "".to_string(),
             generated_otp: false,
+            create_code_count_str: "1".to_string(),
         }
     }
 
@@ -121,6 +123,7 @@ impl Default for InviteCodeManager {
             username: "".to_string(),
             password: "".to_string(),
             generated_otp: false,
+            create_code_count_str: "1".to_string(),
         }
     }
 }
@@ -301,6 +304,12 @@ impl InviteCodeManager {
                 {
                     self.filter_invites();
                 }
+                ui.label("Count:");
+                ui.add(styles::render_base_input(
+                    &mut self.create_code_count_str,
+                    false,
+                    true,
+                ));
                 styles::render_unaligned_button(ui, "Create Invite Code", || {
                     self.create_invite_code();
                     self.get_invite_codes();
@@ -385,11 +394,12 @@ impl InviteCodeManager {
     }
 
     fn create_invite_code(&mut self) {
+        let count = self.create_code_count_str.parse::<i32>().unwrap_or(1);
         let endpoint = self.invite_backend.clone() + CREATE_INVITE_CODES;
         let client = self.client.clone();
         let error_tx = self.error_tx.clone();
         let body = CreateInviteCodeBody {
-            code_count: 1,
+            code_count: count,
             use_count: 1,
         };
 
