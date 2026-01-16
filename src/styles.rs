@@ -27,6 +27,38 @@ pub const FRAME_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(31, 11, 53);
 /// Background color for the buttons.
 pub const BUTTON_BG_COLOR: egui::Color32 = egui::Color32::from_rgb(42, 255, 186);
 
+pub fn apply_global_style(ctx: &egui::Context) {
+    let mut visuals = egui::Visuals::dark();
+
+    // Customize visuals
+    visuals.widgets.noninteractive.corner_radius = egui::CornerRadius::same(8);
+    visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(8);
+    visuals.widgets.hovered.corner_radius = egui::CornerRadius::same(8);
+    visuals.widgets.active.corner_radius = egui::CornerRadius::same(8);
+    visuals.widgets.open.corner_radius = egui::CornerRadius::same(8);
+
+    visuals.window_corner_radius = egui::CornerRadius::same(12);
+    visuals.window_shadow = egui::Shadow {
+        blur: 20,
+        color: egui::Color32::from_black_alpha(80),
+        ..Default::default()
+    };
+
+    ctx.set_visuals(visuals);
+}
+
+pub fn render_card<R>(
+    ui: &mut egui::Ui,
+    add_contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<R> {
+    egui::Frame::group(ui.style())
+        .fill(ui.visuals().faint_bg_color)
+        .corner_radius(egui::CornerRadius::same(8))
+        .inner_margin(egui::Margin::same(16))
+        .outer_margin(egui::Margin::symmetric(24, 8))
+        .show(ui, add_contents)
+}
+
 /// Sets up the fonts for the application using the `egui` context.
 pub fn setup_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
@@ -69,15 +101,17 @@ pub fn render_input(
     text_hint: Option<&str>,
 ) {
     ui.add_space(WIDGET_SPACING_BASE);
-    ui.label(RichText::new(label));
+    ui.label(RichText::new(label).strong());
 
     let mut edit_text = egui::TextEdit::singleline(text)
         .password(is_password)
-        .desired_width(INPUT_WIDTH);
+        .desired_width(f32::INFINITY) // Fill available width in the horizontal layout if needed, but usually limited by parent
+        .margin(egui::Margin::symmetric(8, 4));
+
     if let Some(hint) = text_hint {
         edit_text = edit_text.hint_text(hint);
     }
-    ui.add(edit_text);
+    ui.add_sized([INPUT_WIDTH, 30.0], edit_text);
     ui.add_space(WIDGET_SPACING_BASE);
 }
 
@@ -89,17 +123,17 @@ pub fn render_base_input(
     egui::TextEdit::singleline(text)
         .password(is_password)
         .desired_width(INPUT_WIDTH)
+        .margin(egui::Margin::symmetric(8, 4))
 }
 
 pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callback: impl FnOnce()) {
     let theme = ctx.theme();
 
-    ui.spacing_mut().button_padding =
-        egui::vec2(4.0 * WIDGET_SPACING_BASE, 2.0 * WIDGET_SPACING_BASE);
+    ui.spacing_mut().button_padding = egui::vec2(2.0 * WIDGET_SPACING_BASE, WIDGET_SPACING_BASE);
 
     let text_label = match theme {
-        Theme::Dark => RichText::new(label),
-        Theme::Light => RichText::new(label).color(FRAME_TEXT_COLOR),
+        Theme::Dark => RichText::new(label).strong(),
+        Theme::Light => RichText::new(label).color(FRAME_TEXT_COLOR).strong(),
     };
     let button = match theme {
         Theme::Dark => egui::Button::new(text_label),
@@ -107,12 +141,6 @@ pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callba
     };
 
     if ui.add(button).clicked() {
-        callback();
-    }
-}
-
-pub fn render_unaligned_button(ui: &mut egui::Ui, label: &str, callback: impl FnOnce()) {
-    if ui.button(label).clicked() {
         callback();
     }
 }

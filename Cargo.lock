@@ -6,6 +6,7 @@ version = 4
 name = "InviteCodeClient"
 version = "0.1.0"
 dependencies = [
+    "chrono",
  "eframe",
  "egui_extras",
  "env_logger",
@@ -265,7 +266,7 @@ dependencies = [
     "objc2-foundation 0.3.2",
  "parking_lot",
     "percent-encoding",
-    "windows-sys 0.59.0",
+    "windows-sys 0.60.2",
  "x11rb",
 ]
 
@@ -704,6 +705,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ced0551234e87afee12411d535648dd89d2e7f34c78b753395567aff3d447ff"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "chrono"
+version = "0.4.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
+dependencies = [
+    "iana-time-zone",
+    "js-sys",
+    "num-traits",
+    "serde",
+    "wasm-bindgen",
+    "windows-link 0.2.1",
 ]
 
 [[package]]
@@ -1830,6 +1845,30 @@ dependencies = [
  "tower-service",
  "tracing",
     "windows-registry",
+]
+
+[[package]]
+name = "iana-time-zone"
+version = "0.1.64"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33e57f83510bb73707521ebaffa789ec8caf86f9657cad665b092b581d40e9fb"
+dependencies = [
+    "android_system_properties",
+    "core-foundation-sys",
+    "iana-time-zone-haiku",
+    "js-sys",
+    "log",
+    "wasm-bindgen",
+    "windows-core 0.61.2",
+]
+
+[[package]]
+name = "iana-time-zone-haiku"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
+dependencies = [
+    "cc",
 ]
 
 [[package]]
@@ -3032,7 +3071,7 @@ dependencies = [
     "quinn-udp",
     "rustc-hash 2.1.1",
     "rustls",
-    "socket2 0.5.8",
+    "socket2 0.6.1",
     "thiserror 2.0.17",
     "tokio",
     "tracing",
@@ -3070,9 +3109,9 @@ dependencies = [
     "cfg_aliases",
     "libc",
     "once_cell",
-    "socket2 0.5.8",
+    "socket2 0.6.1",
     "tracing",
-    "windows-sys 0.59.0",
+    "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3346,7 +3385,7 @@ dependencies = [
     "security-framework",
     "security-framework-sys",
     "webpki-root-certs",
-    "windows-sys 0.59.0",
+    "windows-sys 0.61.2",
 ]
 
 [[package]]

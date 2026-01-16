@@ -1,11 +1,18 @@
 use crate::util::create_task;
 use crate::{
-    CREATE_INVITE_CODES, DISABLE_INVITE_CODES, GENERATE_OTP, GET_INVITE_CODES, LOGIN, Page,
-    VALIDATE_OTP, VERIFY_OTP, styles,
+    CREATE_INVITE_CODES, DISABLE_INVITE_CODES, FilterStatus, GENERATE_OTP, GET_INVITE_CODES, LOGIN,
+    Page, VALIDATE_OTP, VERIFY_OTP, styles,
 };
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use alloc::{format, vec};
+use chrono::{DateTime, Utc};
+use core::clone::Clone;
+use core::default::Default;
+use core::option::Option;
 use eframe::egui;
-use eframe::egui::{Context, Image, Ui};
-use egui_extras::{Column, Size, StripBuilder, TableBuilder};
+use eframe::egui::{Context, Image, RichText, Ui};
+use egui_extras::{Column, TableBuilder};
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest::cookie::Jar;
 use reqwest::{Client, StatusCode};
@@ -39,6 +46,7 @@ pub struct InviteCodeManager {
     codes: Vec<Code>,
     filtered_codes: Vec<Code>,
     search_term: String,
+    filter_status: FilterStatus,
     invite_backend: String,
     client: Client,
 
@@ -78,6 +86,7 @@ impl Default for InviteCodeManager {
             codes: vec![],
             filtered_codes: vec![],
             search_term: "".to_string(),
+            filter_status: FilterStatus::All,
             invite_backend: "https://invites.northsky.social".to_string(),
             client,
             invite_code_tx,
@@ -110,6 +119,7 @@ impl Default for InviteCodeManager {
             codes: vec![],
             filtered_codes: vec![],
             search_term: "".to_string(),
+            filter_status: FilterStatus::All,
             invite_backend: "https://invites.northsky.social".to_string(),
             client,
             invite_code_tx,
@@ -145,13 +155,19 @@ impl eframe::App for InviteCodeManager {
                     self.show_home(ui);
                 }
                 Page::Login => {
-                    self.show_login(ui, ctx);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        self.show_login(ui, ctx);
+                    });
                 }
                 Page::QrVerify => {
-                    self.show_verify_qr(ui, ctx);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        self.show_verify_qr(ui, ctx);
+                    });
                 }
                 Page::QrValidate => {
-                    self.show_validate_qr(ui, ctx);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        self.show_validate_qr(ui, ctx);
+                    });
                 }
             }
         });
@@ -179,6 +195,7 @@ impl InviteCodeManager {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         styles::setup_fonts(&cc.egui_ctx);
+        styles::apply_global_style(&cc.egui_ctx);
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
@@ -192,144 +209,206 @@ impl InviteCodeManager {
         InviteCodeManager::default()
     }
 
+    fn format_datetime(datetime_str: &str) -> String {
+        if let Ok(dt) = DateTime::parse_from_rfc3339(datetime_str) {
+            dt.with_timezone(&Utc).format("%b %d, %Y %H:%M").to_string()
+        } else {
+            datetime_str.to_string()
+        }
+    }
+
     fn invite_table_ui(&mut self, ui: &mut Ui) {
-        let available_height = ui.available_height();
         let table = TableBuilder::new(ui)
             .striped(true)
             .resizable(true)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
             .columns(Column::auto().resizable(true), 7)
-            .min_scrolled_height(0.0)
-            .max_scroll_height(available_height);
+            .vscroll(true)
+            .max_scroll_height(1000000f32);
         table
-            .header(20.0, |mut header| {
+            .header(25.0, |mut header| {
                 header.col(|ui| {
-                    ui.heading("Code");
+                    ui.strong("Code");
                 });
                 header.col(|ui| {
-                    ui.heading("Created At");
+                    ui.strong("Created At");
                 });
                 header.col(|ui| {
-                    ui.heading("Used");
+                    ui.strong("Used");
                 });
                 header.col(|ui| {
-                    ui.heading("Disabled");
+                    ui.strong("Disabled");
                 });
                 header.col(|ui| {
-                    ui.heading("Used By");
+                    ui.strong("Used By");
                 });
                 header.col(|ui| {
-                    ui.heading("Used At");
+                    ui.strong("Used At");
                 });
                 header.col(|ui| {
-                    ui.heading("");
+                    ui.strong("Actions");
                 });
             })
-            .body(|mut body| {
-                for code in self.filtered_codes.clone() {
-                    body.row(30.0, |mut row| {
-                        row.col(|ui| {
-                            ui.label(code.code.as_str());
-                        });
-                        row.col(|ui| {
-                            ui.label(code.created_at.as_str());
-                        });
-                        row.col(|ui| match code.available < 1 || !code.uses.is_empty() {
-                            true => {
-                                ui.label("y");
-                            }
-                            false => {
-                                ui.label("n");
-                            }
-                        });
-                        row.col(|ui| match code.disabled {
-                            true => {
-                                ui.label("y");
-                            }
-                            false => {
-                                ui.label("n");
-                            }
-                        });
-                        row.col(|ui| {
-                            let binding = code.uses.clone();
-                            if binding.is_empty() {
-                                ui.label("");
-                            } else {
-                                let uses = binding.first().unwrap();
-                                ui.label(uses.used_by.as_str());
-                            }
-                        });
-                        row.col(|ui| {
-                            let binding = code.uses.clone();
-                            if binding.is_empty() {
-                                ui.label("");
-                            } else {
-                                let uses = binding.first().unwrap();
-                                ui.label(uses.used_at.as_str());
-                            }
-                        });
-                        row.col(|ui| {
+            .body(|body| {
+                let codes = self.filtered_codes.clone();
+                body.rows(35.0, codes.len(), |mut row| {
+                    let index = row.index();
+                    let code = &codes[index];
+
+                    row.col(|ui| {
+                        ui.label(RichText::new(&code.code).monospace());
+                    });
+                    row.col(|ui| {
+                        ui.label(Self::format_datetime(&code.created_at));
+                    });
+                    row.col(|ui| {
+                        let used = code.available < 1 || !code.uses.is_empty();
+                        let text = if used { "✔ Yes" } else { "❌ No" };
+                        let color = if used {
+                            egui::Color32::GREEN
+                        } else {
+                            ui.visuals().text_color()
+                        };
+                        ui.label(RichText::new(text).color(color));
+                    });
+                    row.col(|ui| {
+                        let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
+                        let color = if code.disabled {
+                            egui::Color32::RED
+                        } else {
+                            ui.visuals().text_color()
+                        };
+                        ui.label(RichText::new(text).color(color));
+                    });
+                    row.col(|ui| {
+                        if let Some(usage) = code.uses.first() {
+                            ui.label(&usage.used_by);
+                        } else {
+                            ui.label("-");
+                        }
+                    });
+                    row.col(|ui| {
+                        if let Some(usage) = code.uses.first() {
+                            ui.label(Self::format_datetime(&usage.used_at));
+                        } else {
+                            ui.label("-");
+                        }
+                    });
+                    row.col(|ui| {
+                        if !code.disabled {
                             if ui.button("Disable").clicked() {
                                 self.disable_invite_code(code.code.clone());
                             }
-                        });
+                        } else {
+                            ui.add_enabled(false, egui::Button::new("Disabled"));
+                        }
                     });
-                }
+                });
             });
     }
 
     pub fn show_home(&mut self, ui: &mut Ui) {
-        ui.vertical_centered(|ui| {
-            // Check for new error messages
-            if let Ok(error_message) = self.error_rx.try_recv() {
-                self.error_message = error_message;
-            }
+        // 1. Handle logic/data updates first
+        if let Ok(error_message) = self.error_rx.try_recv() {
+            self.error_message = error_message;
+        }
 
-            // Display current error message, if exists
-            if !self.error_message.is_empty() {
-                styles::render_error(ui, &self.error_message);
-            }
+        if let Ok(invite_codes) = self.invite_code_rx.try_recv() {
+            self.codes = invite_codes.codes;
+            self.filter_invites();
+        }
 
-            if let Ok(invite_codes) = self.invite_code_rx.try_recv() {
-                self.codes = invite_codes.codes;
-                self.filter_invites();
-            }
-
-            ui.horizontal(|ui| {
-                styles::render_unaligned_button(ui, "Get Invite Codes", || {
-                    self.get_invite_codes();
-                });
-                ui.label("Filter:");
-                if ui
-                    .add(styles::render_base_input(
-                        &mut self.search_term,
-                        false,
-                        true,
-                    ))
-                    .changed()
-                {
-                    self.filter_invites();
+        // 2. Render the top controls in a standard vertical layout
+        ui.vertical(|ui| {
+            ui.vertical_centered(|ui| {
+                if !self.error_message.is_empty() {
+                    styles::render_error(ui, &self.error_message);
                 }
-                ui.label("Count:");
-                ui.add(styles::render_base_input(
-                    &mut self.create_code_count_str,
-                    false,
-                    true,
-                ));
-                styles::render_unaligned_button(ui, "Create Invite Code", || {
-                    self.create_invite_code();
-                    self.get_invite_codes();
-                });
-            });
-            ui.separator();
-            StripBuilder::new(ui)
-                .size(Size::remainder().at_least(100.0))
-                .vertical(|mut strip| {
-                    strip.cell(|ui| {
-                        egui::ScrollArea::both().show(ui, |ui| self.invite_table_ui(ui));
+
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 10.0;
+                    let ctx = ui.ctx().clone();
+                    styles::render_button(ui, &ctx, "Refresh List", || {
+                        self.get_invite_codes();
+                    });
+
+                    ui.separator();
+
+                    ui.label(RichText::new("Filter:").strong());
+                    if ui
+                        .add(
+                            styles::render_base_input(&mut self.search_term, false, true)
+                                .hint_text("Search..."),
+                        )
+                        .changed()
+                    {
+                        self.filter_invites();
+                    }
+
+                    egui::ComboBox::from_id_salt("status_filter")
+                        .selected_text(self.filter_status.to_string())
+                        .show_ui(ui, |ui| {
+                            let mut changed = false;
+                            changed |= ui
+                                .selectable_value(&mut self.filter_status, FilterStatus::All, "All")
+                                .clicked();
+                            changed |= ui
+                                .selectable_value(
+                                    &mut self.filter_status,
+                                    FilterStatus::Used,
+                                    "Used",
+                                )
+                                .clicked();
+                            changed |= ui
+                                .selectable_value(
+                                    &mut self.filter_status,
+                                    FilterStatus::Unused,
+                                    "Unused",
+                                )
+                                .clicked();
+                            changed |= ui
+                                .selectable_value(
+                                    &mut self.filter_status,
+                                    FilterStatus::Disabled,
+                                    "Disabled",
+                                )
+                                .clicked();
+                            if changed {
+                                self.filter_invites();
+                            }
+                        });
+
+                    ui.separator();
+
+                    ui.label(RichText::new("Count:").strong());
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.create_code_count_str)
+                            .desired_width(40.0),
+                    );
+
+                    let ctx = ui.ctx().clone();
+                    styles::render_button(ui, &ctx, "➕ Create Code", || {
+                        self.create_invite_code();
+                        self.get_invite_codes();
                     });
                 });
+                ui.add_space(8.0);
+            });
         });
+
+        ui.separator();
+
+        // 3. The CRITICAL part: Use the remaining height for the table.
+        // We use a separate Ui for the table that occupies all remaining space.
+        let remaining_space = ui.available_size();
+        ui.allocate_ui_with_layout(
+            remaining_space,
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                self.invite_table_ui(ui);
+            },
+        );
     }
 
     fn get_invite_codes(&mut self) {
@@ -366,8 +445,30 @@ impl InviteCodeManager {
 
     fn filter_invites(&mut self) {
         self.filtered_codes.clear();
+        let search_term = self.search_term.to_lowercase();
         for code in self.codes.clone() {
-            if code.code.contains(self.search_term.as_str()) {
+            // Search filter
+            let matches_search = if search_term.is_empty() {
+                true
+            } else {
+                let code_match = code.code.to_lowercase().contains(&search_term);
+                let used_by_match = code
+                    .uses
+                    .iter()
+                    .any(|u| u.used_by.to_lowercase().contains(&search_term));
+                code_match || used_by_match
+            };
+
+            // Status filter
+            let used = code.available < 1 || !code.uses.is_empty();
+            let matches_status = match self.filter_status {
+                FilterStatus::All => true,
+                FilterStatus::Used => used,
+                FilterStatus::Unused => !used && !code.disabled,
+                FilterStatus::Disabled => code.disabled,
+            };
+
+            if matches_search && matches_status {
                 self.filtered_codes.push(code.clone());
             }
         }
@@ -435,15 +536,27 @@ impl InviteCodeManager {
                 self.error_message = error_message;
             }
 
-            styles::render_input(ui, "2FA code", &mut self.otp_code, false, None);
+            styles::render_card(ui, |ui| {
+                ui.set_max_width(400.0);
+                ui.vertical_centered(|ui| {
+                    styles::render_input(
+                        ui,
+                        "Enter 2FA Code",
+                        &mut self.otp_code,
+                        false,
+                        Some("000000"),
+                    );
 
-            // Display current error message, if exists
-            if !self.error_message.is_empty() {
-                styles::render_error(ui, &self.error_message);
-            }
+                    // Display current error message, if exists
+                    if !self.error_message.is_empty() {
+                        styles::render_error(ui, &self.error_message);
+                    }
 
-            styles::render_button(ui, ctx, "Submit", || {
-                self.validate_otp();
+                    ui.add_space(10.0);
+                    styles::render_button(ui, ctx, "Verify & Login", || {
+                        self.validate_otp();
+                    });
+                });
             });
         });
     }
@@ -630,114 +743,128 @@ impl InviteCodeManager {
         }
 
         ui.vertical_centered(|ui| {
-            styles::render_input(
-                ui,
-                "Invite Manager Endpoint",
-                &mut self.invite_backend,
-                false,
-                None,
-            );
-            ui.horizontal(|ui| {
-                styles::render_input(ui, "Username", &mut self.username, false, None);
-                if ui.button("📋 Paste").clicked() {
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        // For web/mobile web
-                        let ctx = ui.ctx().clone();
-                        wasm_bindgen_futures::spawn_local(async move {
-                            if let Some(text) = read_clipboard_web().await {
-                                ctx.data_mut(|d| {
-                                    d.insert_temp(egui::Id::new("username_paste_data"), text)
+            styles::render_card(ui, |ui| {
+                ui.set_max_width(400.0);
+                ui.vertical_centered(|ui| {
+                    styles::render_input(
+                        ui,
+                        "Invite Manager Endpoint",
+                        &mut self.invite_backend,
+                        false,
+                        None,
+                    );
+
+                    ui.horizontal(|ui| {
+                        styles::render_input(ui, "Username", &mut self.username, false, None);
+                        if ui.button("📋 Paste").clicked() {
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                // For web/mobile web
+                                let ctx = ui.ctx().clone();
+                                wasm_bindgen_futures::spawn_local(async move {
+                                    if let Some(text) = read_clipboard_web().await {
+                                        ctx.data_mut(|d| {
+                                            d.insert_temp(
+                                                egui::Id::new("username_paste_data"),
+                                                text,
+                                            )
+                                        });
+                                        ctx.request_repaint();
+                                    }
                                 });
-                                ctx.request_repaint();
                             }
-                        });
-                    }
 
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        if let Some(text) = ui.ctx().input(|i| {
-                            i.events.iter().find_map(|e| {
-                                if let egui::Event::Paste(s) = e {
-                                    Some(s.clone())
-                                } else {
-                                    None
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                if let Some(text) = ui.ctx().input(|i| {
+                                    i.events.iter().find_map(|e| {
+                                        if let egui::Event::Paste(s) = e {
+                                            Some(s.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                }) {
+                                    println!("{:?}", text);
+                                    self.username = text;
+                                    ctx.request_repaint();
                                 }
-                            })
-                        }) {
-                            println!("{:?}", text);
-                            self.username = text;
-                            ctx.request_repaint();
+                            }
                         }
-                    }
-                }
-            });
-            ui.horizontal(|ui| {
-                styles::render_input(ui, "Password", &mut self.password, true, None);
-                if ui.button("📋 Paste").clicked() {
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        // For web/mobile web
-                        let ctx = ui.ctx().clone();
-                        wasm_bindgen_futures::spawn_local(async move {
-                            if let Some(text) = read_clipboard_web().await {
-                                ctx.data_mut(|d| {
-                                    d.insert_temp(egui::Id::new("password_paste_data"), text)
+                    });
+
+                    ui.horizontal(|ui| {
+                        styles::render_input(ui, "Password", &mut self.password, true, None);
+                        if ui.button("📋 Paste").clicked() {
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                // For web/mobile web
+                                let ctx = ui.ctx().clone();
+                                wasm_bindgen_futures::spawn_local(async move {
+                                    if let Some(text) = read_clipboard_web().await {
+                                        ctx.data_mut(|d| {
+                                            d.insert_temp(
+                                                egui::Id::new("password_paste_data"),
+                                                text,
+                                            )
+                                        });
+                                        ctx.request_repaint();
+                                    }
                                 });
-                                ctx.request_repaint();
                             }
-                        });
-                    }
 
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        // For egui 0.28+, use:
-                        if let Some(text) = ui.ctx().input(|i| {
-                            i.events.iter().find_map(|e| {
-                                if let egui::Event::Paste(s) = e {
-                                    Some(s.clone())
-                                } else {
-                                    None
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                // For egui 0.28+, use:
+                                if let Some(text) = ui.ctx().input(|i| {
+                                    i.events.iter().find_map(|e| {
+                                        if let egui::Event::Paste(s) = e {
+                                            Some(s.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                }) {
+                                    println!("{:?}", text);
+                                    self.password = text;
+                                    ctx.request_repaint();
                                 }
-                            })
-                        }) {
-                            println!("{:?}", text);
-                            self.password = text;
-                            ctx.request_repaint();
+                            }
                         }
+                    });
+
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(text) = ui
+                        .ctx()
+                        .data(|d| d.get_temp::<String>(egui::Id::new("username_paste_data")))
+                    {
+                        self.username = text.clone();
+                        ui.ctx()
+                            .data_mut(|d| d.remove::<String>(egui::Id::new("username_paste_data")));
+                        ctx.request_repaint();
                     }
-                }
-            });
 
-            #[cfg(target_arch = "wasm32")]
-            if let Some(text) = ui
-                .ctx()
-                .data(|d| d.get_temp::<String>(egui::Id::new("username_paste_data")))
-            {
-                self.username = text.clone();
-                ui.ctx()
-                    .data_mut(|d| d.remove::<String>(egui::Id::new("username_paste_data")));
-                ctx.request_repaint();
-            }
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(text) = ui
+                        .ctx()
+                        .data(|d| d.get_temp::<String>(egui::Id::new("password_paste_data")))
+                    {
+                        self.password = text.clone();
+                        ui.ctx()
+                            .data_mut(|d| d.remove::<String>(egui::Id::new("password_paste_data")));
+                        ctx.request_repaint();
+                    }
 
-            #[cfg(target_arch = "wasm32")]
-            if let Some(text) = ui
-                .ctx()
-                .data(|d| d.get_temp::<String>(egui::Id::new("password_paste_data")))
-            {
-                self.password = text.clone();
-                ui.ctx()
-                    .data_mut(|d| d.remove::<String>(egui::Id::new("password_paste_data")));
-                ctx.request_repaint();
-            }
+                    // Display current error message, if exists
+                    if !self.error_message.is_empty() {
+                        styles::render_error(ui, &self.error_message);
+                    }
 
-            // Display current error message, if exists
-            if !self.error_message.is_empty() {
-                styles::render_error(ui, &self.error_message);
-            }
-
-            styles::render_button(ui, ctx, "Submit", || {
-                self.login();
+                    ui.add_space(10.0);
+                    styles::render_button(ui, ctx, "Submit", || {
+                        self.login();
+                    });
+                });
             });
         });
     }

@@ -1,4 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+extern crate alloc;
+extern crate core;
 
 use crate::app::InviteCodeManager;
 #[cfg(not(target_arch = "wasm32"))]
@@ -13,6 +15,31 @@ use tokio::runtime::Runtime;
 mod app;
 mod styles;
 mod util;
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum FilterStatus {
+    All,
+    Used,
+    Unused,
+    Disabled,
+}
+
+impl Default for FilterStatus {
+    fn default() -> Self {
+        Self::All
+    }
+}
+
+impl FilterStatus {
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::All => "All".to_string(),
+            Self::Used => "Used".to_string(),
+            Self::Unused => "Unused".to_string(),
+            Self::Disabled => "Disabled".to_string(),
+        }
+    }
+}
 
 enum Page {
     Home,
@@ -96,6 +123,7 @@ fn main() {
                 Box::new(|cc| {
                     egui_extras::install_image_loaders(&cc.egui_ctx);
                     styles::setup_fonts(&cc.egui_ctx);
+                    styles::apply_global_style(&cc.egui_ctx);
                     Ok(Box::<InviteCodeManager>::default())
                 }),
             )
