@@ -3,6 +3,7 @@ extern crate alloc;
 extern crate core;
 
 use crate::app::InviteCodeManager;
+use core::fmt::Display;
 #[cfg(not(target_arch = "wasm32"))]
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
@@ -16,27 +17,22 @@ mod app;
 mod styles;
 mod util;
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub enum FilterStatus {
+    #[default]
     All,
     Used,
     Unused,
     Disabled,
 }
 
-impl Default for FilterStatus {
-    fn default() -> Self {
-        Self::All
-    }
-}
-
-impl FilterStatus {
-    pub fn to_string(&self) -> String {
+impl Display for FilterStatus {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::All => "All".to_string(),
-            Self::Used => "Used".to_string(),
-            Self::Unused => "Unused".to_string(),
-            Self::Disabled => "Disabled".to_string(),
+            Self::All => write!(f, "All"),
+            Self::Used => write!(f, "Used"),
+            Self::Unused => write!(f, "Unused"),
+            Self::Disabled => write!(f, "Disabled"),
         }
     }
 }
