@@ -9,13 +9,13 @@ include = [
 license = "MIT"
 
 [dependencies]
-egui_extras = {  version = "0.32.0", features = ["default", "image"] }
-eframe = { version = "0.32.0", features = [
+egui_extras = { version = "0.33.3", features = ["default", "image"] }
+eframe = { version = "0.33.3", features = [
     "default",
     "__screenshot", # __screenshot is so we can dump a screenshot using EFRAME_SCREENSHOT_TO
 ] }
 env_logger = "0.11.7"
-reqwest = { version = "0.12.14", features = ["json", "cookies"] }
+reqwest = { version = "0.13.1", features = ["json", "cookies"] }
 serde = { version = "1.0.219", features = ["derive"] }
 totp-rs = { version = "5.6.0" , features = ["qr"]}
 log = "0.4.26"
