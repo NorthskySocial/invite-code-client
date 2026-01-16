@@ -187,7 +187,7 @@ impl eframe::App for InviteCodeManager {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct InviteCodes {
-    pub cursor: String,
+    pub cursor: Option<String>,
     pub codes: Vec<Code>,
 }
 
