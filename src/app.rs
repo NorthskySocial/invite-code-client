@@ -140,13 +140,7 @@ impl Default for InviteCodeManager {
 
 impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Apply scaling if on mobile
-        if styles::is_mobile(ctx) {
-            ctx.set_zoom_factor(1.0);
-        } else {
-            ctx.set_zoom_factor(1.0);
-        }
-
+        ctx.set_zoom_factor(1.0);
         egui::CentralPanel::default().show(ctx, |ui| {
             // Basic window styling.
             styles::set_text_color(ui);
@@ -232,36 +226,57 @@ impl InviteCodeManager {
                 .striped(true)
                 .resizable(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .columns(Column::auto().resizable(true), 7)
-                .vscroll(true)
-                .max_scroll_height(1000000f32);
+                .column(Column::initial(100.0).at_least(80.0).resizable(true)) // Code
+                .column(Column::initial(150.0).at_least(120.0).resizable(true)) // Created At
+                .column(Column::auto().at_least(60.0).resizable(true)) // Used
+                .column(Column::auto().at_least(80.0).resizable(true)) // Disabled
+                .column(Column::remainder().at_least(100.0).resizable(true)) // Used By
+                .column(Column::initial(150.0).at_least(120.0).resizable(true)) // Used At
+                .column(Column::auto().at_least(100.0).resizable(true)) // Actions
+                .min_scrolled_height(400.0)
+                .vscroll(true);
+
             table
-                .header(25.0, |mut header| {
+                .header(30.0, |mut header| {
                     header.col(|ui| {
-                        ui.strong("Code");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Code");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Created At");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Created At");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Used");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Used");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Disabled");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Disabled");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Used By");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Used By");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Used At");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Used At");
+                        });
                     });
                     header.col(|ui| {
-                        ui.strong("Actions");
+                        ui.vertical_centered(|ui| {
+                            ui.strong("Actions");
+                        });
                     });
                 })
                 .body(|body| {
                     let codes = self.filtered_codes.clone();
-                    body.rows(35.0, codes.len(), |mut row| {
+                    body.rows(40.0, codes.len(), |mut row| {
                         let index = row.index();
                         let code = &codes[index];
 
@@ -305,13 +320,15 @@ impl InviteCodeManager {
                             }
                         });
                         row.col(|ui| {
-                            if !code.disabled {
-                                if ui.button("Disable").clicked() {
-                                    self.disable_invite_code(code.code.clone());
+                            ui.horizontal_centered(|ui| {
+                                if !code.disabled {
+                                    if ui.button("Disable").clicked() {
+                                        self.disable_invite_code(code.code.clone());
+                                    }
+                                } else {
+                                    ui.add_enabled(false, egui::Button::new("Disabled"));
                                 }
-                            } else {
-                                ui.add_enabled(false, egui::Button::new("Disabled"));
-                            }
+                            });
                         });
                     });
                 });
@@ -495,11 +512,24 @@ impl InviteCodeManager {
                     });
                 };
 
-                if is_mobile {
-                    ui.vertical(layout_func);
+                let available_width = ui.available_width();
+                let controls_width = if is_mobile {
+                    available_width
                 } else {
-                    ui.horizontal(layout_func);
-                }
+                    1000.0f32.min(available_width * 0.95)
+                };
+
+                ui.allocate_ui_with_layout(
+                    egui::vec2(controls_width, ui.available_height()),
+                    egui::Layout::top_down(egui::Align::Center),
+                    |ui| {
+                        if is_mobile {
+                            ui.vertical(layout_func);
+                        } else {
+                            ui.horizontal(layout_func);
+                        }
+                    },
+                );
 
                 ui.add_space(8.0);
             });
@@ -509,14 +539,22 @@ impl InviteCodeManager {
 
         // 3. The CRITICAL part: Use the remaining height for the table.
         // We use a separate Ui for the table that occupies all remaining space.
-        let remaining_space = ui.available_size();
-        ui.allocate_ui_with_layout(
-            remaining_space,
-            egui::Layout::top_down(egui::Align::Min),
-            |ui| {
-                self.invite_table_ui(ui);
-            },
-        );
+        ui.vertical_centered(|ui| {
+            let available_width = ui.available_width();
+            let table_width = if is_mobile {
+                available_width
+            } else {
+                1000.0f32.min(available_width * 0.95)
+            };
+
+            ui.allocate_ui_with_layout(
+                egui::vec2(table_width, ui.available_height()),
+                egui::Layout::top_down(egui::Align::Center),
+                |ui| {
+                    self.invite_table_ui(ui);
+                },
+            );
+        });
     }
 
     fn get_invite_codes(&mut self) {

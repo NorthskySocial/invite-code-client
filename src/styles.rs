@@ -47,7 +47,7 @@ pub fn is_mobile(ctx: &egui::Context) -> bool {
         // But more reliably, we can check the size.
         i.viewport()
             .outer_rect
-            .map_or(false, |rect| rect.width() < 600.0)
+            .is_some_and(|rect| rect.width() < 600.0)
     }) || ctx.content_rect().width() < 600.0
 }
 
