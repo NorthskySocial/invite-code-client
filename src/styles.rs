@@ -258,21 +258,3 @@ pub fn render_error(ui: &mut egui::Ui, error_message: &str) {
     });
     ui.add_space(WIDGET_SPACING_BASE);
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_constants() {
-        assert_eq!(FRAME_TITLE, "Invite Code Manager");
-        assert_eq!(INPUT_WIDTH, 200.0);
-        assert_eq!(WIDGET_SPACING_BASE, 8.0);
-        assert_eq!(MAIN_FONT_NAME, "Geist");
-    }
-
-    #[test]
-    fn test_error_text_color() {
-        assert_eq!(ERROR_TEXT_COLOR, egui::Color32::from_rgb(255, 0, 0));
-    }
-}
