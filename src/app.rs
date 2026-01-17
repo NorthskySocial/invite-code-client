@@ -140,6 +140,13 @@ impl Default for InviteCodeManager {
 
 impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Apply scaling if on mobile
+        if styles::is_mobile(ctx) {
+            ctx.set_zoom_factor(1.0);
+        } else {
+            ctx.set_zoom_factor(1.0);
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             // Basic window styling.
             styles::set_text_color(ui);
@@ -218,93 +225,164 @@ impl InviteCodeManager {
     }
 
     fn invite_table_ui(&mut self, ui: &mut Ui) {
-        let table = TableBuilder::new(ui)
-            .striped(true)
-            .resizable(true)
-            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .columns(Column::auto().resizable(true), 7)
-            .vscroll(true)
-            .max_scroll_height(1000000f32);
-        table
-            .header(25.0, |mut header| {
-                header.col(|ui| {
-                    ui.strong("Code");
-                });
-                header.col(|ui| {
-                    ui.strong("Created At");
-                });
-                header.col(|ui| {
-                    ui.strong("Used");
-                });
-                header.col(|ui| {
-                    ui.strong("Disabled");
-                });
-                header.col(|ui| {
-                    ui.strong("Used By");
-                });
-                header.col(|ui| {
-                    ui.strong("Used At");
-                });
-                header.col(|ui| {
-                    ui.strong("Actions");
-                });
-            })
-            .body(|body| {
-                let codes = self.filtered_codes.clone();
-                body.rows(35.0, codes.len(), |mut row| {
-                    let index = row.index();
-                    let code = &codes[index];
+        if styles::is_mobile(ui.ctx()) {
+            self.invite_list_mobile_ui(ui);
+        } else {
+            let table = TableBuilder::new(ui)
+                .striped(true)
+                .resizable(true)
+                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .columns(Column::auto().resizable(true), 7)
+                .vscroll(true)
+                .max_scroll_height(1000000f32);
+            table
+                .header(25.0, |mut header| {
+                    header.col(|ui| {
+                        ui.strong("Code");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Created At");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Used");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Disabled");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Used By");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Used At");
+                    });
+                    header.col(|ui| {
+                        ui.strong("Actions");
+                    });
+                })
+                .body(|body| {
+                    let codes = self.filtered_codes.clone();
+                    body.rows(35.0, codes.len(), |mut row| {
+                        let index = row.index();
+                        let code = &codes[index];
 
-                    row.col(|ui| {
-                        ui.label(RichText::new(&code.code).monospace());
-                    });
-                    row.col(|ui| {
-                        ui.label(Self::format_datetime(&code.created_at));
-                    });
-                    row.col(|ui| {
-                        let used = code.available < 1 || !code.uses.is_empty();
-                        let text = if used { "✔ Yes" } else { "❌ No" };
-                        let color = if used {
-                            egui::Color32::GREEN
-                        } else {
-                            ui.visuals().text_color()
-                        };
-                        ui.label(RichText::new(text).color(color));
-                    });
-                    row.col(|ui| {
-                        let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
-                        let color = if code.disabled {
-                            egui::Color32::RED
-                        } else {
-                            ui.visuals().text_color()
-                        };
-                        ui.label(RichText::new(text).color(color));
-                    });
-                    row.col(|ui| {
-                        if let Some(usage) = code.uses.first() {
-                            ui.label(&usage.used_by);
-                        } else {
-                            ui.label("-");
-                        }
-                    });
-                    row.col(|ui| {
-                        if let Some(usage) = code.uses.first() {
-                            ui.label(Self::format_datetime(&usage.used_at));
-                        } else {
-                            ui.label("-");
-                        }
-                    });
-                    row.col(|ui| {
-                        if !code.disabled {
-                            if ui.button("Disable").clicked() {
-                                self.disable_invite_code(code.code.clone());
+                        row.col(|ui| {
+                            ui.label(RichText::new(&code.code).monospace());
+                        });
+                        row.col(|ui| {
+                            ui.label(Self::format_datetime(&code.created_at));
+                        });
+                        row.col(|ui| {
+                            let used = code.available < 1 || !code.uses.is_empty();
+                            let text = if used { "✔ Yes" } else { "❌ No" };
+                            let color = if used {
+                                egui::Color32::GREEN
+                            } else {
+                                ui.visuals().text_color()
+                            };
+                            ui.label(RichText::new(text).color(color));
+                        });
+                        row.col(|ui| {
+                            let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
+                            let color = if code.disabled {
+                                egui::Color32::RED
+                            } else {
+                                ui.visuals().text_color()
+                            };
+                            ui.label(RichText::new(text).color(color));
+                        });
+                        row.col(|ui| {
+                            if let Some(usage) = code.uses.first() {
+                                ui.label(&usage.used_by);
+                            } else {
+                                ui.label("-");
                             }
-                        } else {
-                            ui.add_enabled(false, egui::Button::new("Disabled"));
-                        }
+                        });
+                        row.col(|ui| {
+                            if let Some(usage) = code.uses.first() {
+                                ui.label(Self::format_datetime(&usage.used_at));
+                            } else {
+                                ui.label("-");
+                            }
+                        });
+                        row.col(|ui| {
+                            if !code.disabled {
+                                if ui.button("Disable").clicked() {
+                                    self.disable_invite_code(code.code.clone());
+                                }
+                            } else {
+                                ui.add_enabled(false, egui::Button::new("Disabled"));
+                            }
+                        });
                     });
                 });
+        }
+    }
+
+    fn invite_list_mobile_ui(&mut self, ui: &mut Ui) {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.vertical(|ui| {
+                let codes = self.filtered_codes.clone();
+                for code in codes {
+                    styles::render_card(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new("Code:").strong());
+                                ui.label(RichText::new(&code.code).monospace());
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new("Created:").strong());
+                                ui.label(Self::format_datetime(&code.created_at));
+                            });
+
+                            let used = code.available < 1 || !code.uses.is_empty();
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new("Used:").strong());
+                                let text = if used { "✔ Yes" } else { "❌ No" };
+                                let color = if used {
+                                    egui::Color32::GREEN
+                                } else {
+                                    ui.visuals().text_color()
+                                };
+                                ui.label(RichText::new(text).color(color));
+                            });
+
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new("Disabled:").strong());
+                                let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
+                                let color = if code.disabled {
+                                    egui::Color32::RED
+                                } else {
+                                    ui.visuals().text_color()
+                                };
+                                ui.label(RichText::new(text).color(color));
+                            });
+
+                            if let Some(usage) = code.uses.first() {
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Used By:").strong());
+                                    ui.label(&usage.used_by);
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Used At:").strong());
+                                    ui.label(Self::format_datetime(&usage.used_at));
+                                });
+                            }
+
+                            ui.add_space(4.0);
+                            let ctx = ui.ctx().clone();
+                            if !code.disabled {
+                                styles::render_button(ui, &ctx, "Disable", || {
+                                    self.disable_invite_code(code.code.clone());
+                                });
+                            } else {
+                                ui.add_enabled(false, egui::Button::new("Disabled"));
+                            }
+                        });
+                    });
+                    ui.add_space(8.0);
+                }
             });
+        });
     }
 
     pub fn show_home(&mut self, ui: &mut Ui) {
@@ -318,6 +396,8 @@ impl InviteCodeManager {
             self.filter_invites();
         }
 
+        let is_mobile = styles::is_mobile(ui.ctx());
+
         // 2. Render the top controls in a standard vertical layout
         ui.vertical(|ui| {
             ui.vertical_centered(|ui| {
@@ -326,24 +406,35 @@ impl InviteCodeManager {
                 }
 
                 ui.add_space(8.0);
-                ui.horizontal(|ui| {
+
+                let layout_func = |ui: &mut Ui| {
                     ui.spacing_mut().item_spacing.x = 10.0;
                     let ctx = ui.ctx().clone();
                     styles::render_button(ui, &ctx, "Refresh List", || {
                         self.get_invite_codes();
                     });
 
-                    ui.separator();
+                    if is_mobile {
+                        ui.add_space(8.0);
+                    } else {
+                        ui.separator();
+                    }
 
-                    ui.label(RichText::new("Filter:").strong());
-                    if ui
-                        .add(
-                            styles::render_base_input(&mut self.search_term, false, true)
-                                .hint_text("Search..."),
-                        )
-                        .changed()
-                    {
-                        self.filter_invites();
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Filter:").strong());
+                        if ui
+                            .add(
+                                styles::render_base_input(&mut self.search_term, false, true)
+                                    .hint_text("Search..."),
+                            )
+                            .changed()
+                        {
+                            self.filter_invites();
+                        }
+                    });
+
+                    if is_mobile {
+                        ui.add_space(8.0);
                     }
 
                     egui::ComboBox::from_id_salt("status_filter")
@@ -379,20 +470,37 @@ impl InviteCodeManager {
                             }
                         });
 
-                    ui.separator();
+                    if is_mobile {
+                        ui.add_space(8.0);
+                    } else {
+                        ui.separator();
+                    }
 
-                    ui.label(RichText::new("Count:").strong());
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.create_code_count_str)
-                            .desired_width(40.0),
-                    );
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Count:").strong());
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.create_code_count_str)
+                                .desired_width(40.0),
+                        );
+                    });
+
+                    if is_mobile {
+                        ui.add_space(8.0);
+                    }
 
                     let ctx = ui.ctx().clone();
                     styles::render_button(ui, &ctx, "➕ Create Code", || {
                         self.create_invite_code();
                         self.get_invite_codes();
                     });
-                });
+                };
+
+                if is_mobile {
+                    ui.vertical(layout_func);
+                } else {
+                    ui.horizontal(layout_func);
+                }
+
                 ui.add_space(8.0);
             });
         });
@@ -754,13 +862,13 @@ impl InviteCodeManager {
                         None,
                     );
 
-                    ui.horizontal(|ui| {
+                    let input_layout = |ui: &mut Ui| {
                         styles::render_input(ui, "Username", &mut self.username, false, None);
-                        if ui.button("📋 Paste").clicked() {
+                        let ctx = ui.ctx().clone();
+                        styles::render_button(ui, &ctx.clone(), "📋 Paste", || {
                             #[cfg(target_arch = "wasm32")]
                             {
                                 // For web/mobile web
-                                let ctx = ui.ctx().clone();
                                 wasm_bindgen_futures::spawn_local(async move {
                                     if let Some(text) = read_clipboard_web().await {
                                         ctx.data_mut(|d| {
@@ -776,7 +884,7 @@ impl InviteCodeManager {
 
                             #[cfg(not(target_arch = "wasm32"))]
                             {
-                                if let Some(text) = ui.ctx().input(|i| {
+                                if let Some(text) = ctx.input(|i| {
                                     i.events.iter().find_map(|e| {
                                         if let egui::Event::Paste(s) = e {
                                             Some(s.clone())
@@ -790,16 +898,22 @@ impl InviteCodeManager {
                                     ctx.request_repaint();
                                 }
                             }
-                        }
-                    });
+                        });
+                    };
 
-                    ui.horizontal(|ui| {
+                    if styles::is_mobile(ui.ctx()) {
+                        ui.vertical(input_layout);
+                    } else {
+                        ui.horizontal(input_layout);
+                    }
+
+                    let password_layout = |ui: &mut Ui| {
                         styles::render_input(ui, "Password", &mut self.password, true, None);
-                        if ui.button("📋 Paste").clicked() {
+                        let ctx = ui.ctx().clone();
+                        styles::render_button(ui, &ctx.clone(), "📋 Paste", || {
                             #[cfg(target_arch = "wasm32")]
                             {
                                 // For web/mobile web
-                                let ctx = ui.ctx().clone();
                                 wasm_bindgen_futures::spawn_local(async move {
                                     if let Some(text) = read_clipboard_web().await {
                                         ctx.data_mut(|d| {
@@ -816,7 +930,7 @@ impl InviteCodeManager {
                             #[cfg(not(target_arch = "wasm32"))]
                             {
                                 // For egui 0.28+, use:
-                                if let Some(text) = ui.ctx().input(|i| {
+                                if let Some(text) = ctx.input(|i| {
                                     i.events.iter().find_map(|e| {
                                         if let egui::Event::Paste(s) = e {
                                             Some(s.clone())
@@ -830,8 +944,14 @@ impl InviteCodeManager {
                                     ctx.request_repaint();
                                 }
                             }
-                        }
-                    });
+                        });
+                    };
+
+                    if styles::is_mobile(ui.ctx()) {
+                        ui.vertical(password_layout);
+                    } else {
+                        ui.horizontal(password_layout);
+                    }
 
                     #[cfg(target_arch = "wasm32")]
                     if let Some(text) = ui

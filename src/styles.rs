@@ -8,18 +8,48 @@ pub const FRAME_TITLE: &str = "Invite Code Manager";
 const ERROR_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(255, 0, 0);
 
 /// Size of the title text.
-const TITLE_SIZE: f32 = 36.0;
+fn get_title_size(ctx: &egui::Context) -> f32 {
+    if is_mobile(ctx) { 20.0 } else { 36.0 }
+}
 
 /// Size of the subtitle text.
-const SUBTITLE_SIZE: f32 = 24.0;
+fn get_subtitle_size(ctx: &egui::Context) -> f32 {
+    if is_mobile(ctx) { 16.0 } else { 24.0 }
+}
 
 /// Input field width.
 const INPUT_WIDTH: f32 = 200.0;
 
 /// Base measure to be used for different spacing calculations in the UI.
-const WIDGET_SPACING_BASE: f32 = 5.0;
+const WIDGET_SPACING_BASE: f32 = 8.0;
 /// Font name for the main UI font.
 const MAIN_FONT_NAME: &str = "Geist";
+
+pub fn is_mobile(ctx: &egui::Context) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            if let Ok(user_agent) = window.navigator().user_agent() {
+                let ua = user_agent.to_lowercase();
+                if ua.contains("iphone")
+                    || ua.contains("ipad")
+                    || ua.contains("android")
+                    || ua.contains("mobi")
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    ctx.input(|i| {
+        // Many mobile devices report as "tablet" or "mobile" in screen_reader
+        // But more reliably, we can check the size.
+        i.viewport()
+            .outer_rect
+            .map_or(false, |rect| rect.width() < 600.0)
+    }) || ctx.content_rect().width() < 600.0
+}
 
 /// Text color for the UI.
 pub const FRAME_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(31, 11, 53);
@@ -51,11 +81,21 @@ pub fn render_card<R>(
     ui: &mut egui::Ui,
     add_contents: impl FnOnce(&mut egui::Ui) -> R,
 ) -> egui::InnerResponse<R> {
+    let margin = if is_mobile(ui.ctx()) {
+        egui::Margin::symmetric(4, 4)
+    } else {
+        egui::Margin::symmetric(24, 8)
+    };
+
     egui::Frame::group(ui.style())
         .fill(ui.visuals().faint_bg_color)
         .corner_radius(egui::CornerRadius::same(8))
-        .inner_margin(egui::Margin::same(16))
-        .outer_margin(egui::Margin::symmetric(24, 8))
+        .inner_margin(if is_mobile(ui.ctx()) {
+            egui::Margin::same(8)
+        } else {
+            egui::Margin::same(16)
+        })
+        .outer_margin(margin)
         .show(ui, add_contents)
 }
 
@@ -84,12 +124,12 @@ pub fn set_text_color(_ui: &mut egui::Ui) {
 
 /// Renders a title-styled label with a specific text.
 pub fn render_title(ui: &mut egui::Ui, ctx: &egui::Context, text: &str) {
-    render_heading(ui, ctx, text, TITLE_SIZE);
+    render_heading(ui, ctx, text, get_title_size(ctx));
 }
 
 /// Renders a subtitle-styled label with a specific text.
 pub fn render_subtitle(ui: &mut egui::Ui, ctx: &egui::Context, text: &str) {
-    render_heading(ui, ctx, text, SUBTITLE_SIZE);
+    render_heading(ui, ctx, text, get_subtitle_size(ctx));
 }
 
 /// Renders a styled input field with a given label and control text.
@@ -103,15 +143,25 @@ pub fn render_input(
     ui.add_space(WIDGET_SPACING_BASE);
     ui.label(RichText::new(label).strong());
 
+    let ctx = ui.ctx().clone();
+    let height = if is_mobile(&ctx) { 32.0 } else { 30.0 };
+
     let mut edit_text = egui::TextEdit::singleline(text)
         .password(is_password)
-        .desired_width(f32::INFINITY) // Fill available width in the horizontal layout if needed, but usually limited by parent
+        .desired_width(if is_mobile(&ctx) {
+            160.0
+        } else {
+            f32::INFINITY
+        }) // More conservative width on mobile
         .margin(egui::Margin::symmetric(8, 4));
 
     if let Some(hint) = text_hint {
         edit_text = edit_text.hint_text(hint);
     }
-    ui.add_sized([INPUT_WIDTH, 30.0], edit_text);
+    ui.add_sized(
+        [if is_mobile(&ctx) { 160.0 } else { INPUT_WIDTH }, height],
+        edit_text,
+    );
     ui.add_space(WIDGET_SPACING_BASE);
 }
 
@@ -129,12 +179,24 @@ pub fn render_base_input(
 pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callback: impl FnOnce()) {
     let theme = ctx.theme();
 
-    ui.spacing_mut().button_padding = egui::vec2(2.0 * WIDGET_SPACING_BASE, WIDGET_SPACING_BASE);
+    let padding = if is_mobile(ctx) {
+        egui::vec2(12.0, 8.0)
+    } else {
+        egui::vec2(2.0 * WIDGET_SPACING_BASE, WIDGET_SPACING_BASE)
+    };
+    ui.spacing_mut().button_padding = padding;
 
     let text_label = match theme {
         Theme::Dark => RichText::new(label).strong(),
         Theme::Light => RichText::new(label).color(FRAME_TEXT_COLOR).strong(),
     };
+
+    let text_label = if is_mobile(ctx) {
+        text_label.size(16.0)
+    } else {
+        text_label
+    };
+
     let button = match theme {
         Theme::Dark => egui::Button::new(text_label),
         Theme::Light => egui::Button::new(text_label).fill(BUTTON_BG_COLOR),
@@ -147,10 +209,15 @@ pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callba
 
 /// Renders a heading-styled label with a specific text and size.
 fn render_heading(ui: &mut egui::Ui, ctx: &egui::Context, text: &str, size: f32) {
+    let margin = if is_mobile(ctx) {
+        size / 6.0
+    } else {
+        size / 2.0
+    };
     match ctx.theme() {
         Theme::Dark => {
             egui::Frame::default()
-                .inner_margin(egui::vec2(size / 2.0, size / 2.0))
+                .inner_margin(egui::vec2(margin, margin))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
@@ -164,7 +231,7 @@ fn render_heading(ui: &mut egui::Ui, ctx: &egui::Context, text: &str, size: f32)
         }
         Theme::Light => {
             egui::Frame::default()
-                .inner_margin(egui::vec2(size / 2.0, size / 2.0))
+                .inner_margin(egui::vec2(margin, margin))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
@@ -199,10 +266,8 @@ mod tests {
     #[test]
     fn test_constants() {
         assert_eq!(FRAME_TITLE, "Invite Code Manager");
-        assert_eq!(TITLE_SIZE, 36.0);
-        assert_eq!(SUBTITLE_SIZE, 24.0);
         assert_eq!(INPUT_WIDTH, 200.0);
-        assert_eq!(WIDGET_SPACING_BASE, 5.0);
+        assert_eq!(WIDGET_SPACING_BASE, 8.0);
         assert_eq!(MAIN_FONT_NAME, "Geist");
     }
 
