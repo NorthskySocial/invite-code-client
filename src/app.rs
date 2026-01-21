@@ -10,6 +10,8 @@ use chrono::{DateTime, Utc};
 use core::clone::Clone;
 use core::default::Default;
 use core::option::Option;
+#[cfg(target_arch = "wasm32")]
+use crossbeam_channel::{Receiver, Sender};
 use eframe::egui;
 use eframe::egui::{Context, Image, RichText, Ui};
 use egui_extras::{Column, TableBuilder};
@@ -20,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc::{Receiver, Sender};
 use totp_rs::{Algorithm, Secret, TOTP};
 
@@ -109,10 +112,10 @@ impl Default for InviteCodeManager {
 
     #[cfg(target_arch = "wasm32")]
     fn default() -> Self {
-        let (page_tx, page_rx) = std::sync::mpsc::channel();
-        let (error_tx, error_rx) = std::sync::mpsc::channel();
-        let (invite_code_tx, invite_code_rx) = std::sync::mpsc::channel();
-        let (qr_tx, qr_rx) = std::sync::mpsc::channel();
+        let (page_tx, page_rx) = crossbeam_channel::unbounded();
+        let (error_tx, error_rx) = crossbeam_channel::unbounded();
+        let (invite_code_tx, invite_code_rx) = crossbeam_channel::unbounded();
+        let (qr_tx, qr_rx) = crossbeam_channel::unbounded();
         let client = Client::builder().build().unwrap();
         Self {
             page: Page::Login,
@@ -652,18 +655,16 @@ impl InviteCodeManager {
                 .unwrap();
             if !res.status().is_success() {
                 let status = res.status();
-                error_tx
-                    .send(format!("Received HTTP Status: {status}"))
-                    .unwrap();
+                let _ = error_tx.send(format!("Received HTTP Status: {status}"));
                 return;
             }
             let invite_codes = res.json::<InviteCodes>().await;
             match invite_codes {
                 Ok(invite_codes) => {
-                    invite_code_tx.send(invite_codes).unwrap();
+                    let _ = invite_code_tx.send(invite_codes);
                 }
                 Err(e) => {
-                    error_tx.send(format!("Error: {e}")).unwrap();
+                    let _ = error_tx.send(format!("Error: {e}"));
                 }
             }
         });
@@ -727,9 +728,7 @@ impl InviteCodeManager {
                 .unwrap();
             if !res.status().is_success() {
                 let status = res.status();
-                error_tx
-                    .send(format!("Received HTTP Status: {status}"))
-                    .unwrap();
+                let _ = error_tx.send(format!("Received HTTP Status: {status}"));
             }
         });
     }
@@ -754,9 +753,7 @@ impl InviteCodeManager {
                 .unwrap();
             if !res.status().is_success() {
                 let status = res.status();
-                error_tx
-                    .send(format!("Received HTTP Status: {status}"))
-                    .unwrap();
+                let _ = error_tx.send(format!("Received HTTP Status: {status}"));
             }
         });
     }
@@ -959,12 +956,10 @@ impl InviteCodeManager {
                 .unwrap();
             if !res.status().is_success() {
                 let status = res.status();
-                error_tx
-                    .send(format!("Received HTTP Status: {status}"))
-                    .unwrap();
+                let _ = error_tx.send(format!("Received HTTP Status: {status}"));
                 return;
             }
-            page_tx.send(Page::Home).unwrap();
+            let _ = page_tx.send(Page::Home);
         });
     }
 
@@ -1168,23 +1163,21 @@ impl InviteCodeManager {
             {
                 Ok(response) => response,
                 Err(err) => {
-                    error_tx.send(format!("Error: {err}")).unwrap();
+                    let _ = error_tx.send(format!("Error: {err}"));
                     return;
                 }
             };
 
             if !res.status().is_success() {
                 let status = res.status();
-                error_tx
-                    .send(format!("Received HTTP Status: {status}"))
-                    .unwrap();
+                let _ = error_tx.send(format!("Received HTTP Status: {status}"));
                 return;
             }
 
             if res.status() == StatusCode::OK {
-                page_tx.send(Page::QrValidate).unwrap();
+                let _ = page_tx.send(Page::QrValidate);
             } else if res.status() == StatusCode::from_u16(201).unwrap() {
-                page_tx.send(Page::QrVerify).unwrap();
+                let _ = page_tx.send(Page::QrVerify);
             }
         });
     }
