@@ -9,12 +9,22 @@ const ERROR_TEXT_COLOR: egui::Color32 = egui::Color32::from_rgb(255, 0, 0);
 
 /// Size of the title text.
 fn get_title_size(ctx: &egui::Context) -> f32 {
-    if is_mobile(ctx) { 20.0 } else { 36.0 }
+    let width = get_screen_width(ctx);
+    if is_mobile(ctx) {
+        (width / 12.0).clamp(1.0, 40.0)
+    } else {
+        36.0
+    }
 }
 
 /// Size of the subtitle text.
 fn get_subtitle_size(ctx: &egui::Context) -> f32 {
-    if is_mobile(ctx) { 16.0 } else { 24.0 }
+    let width = get_screen_width(ctx);
+    if is_mobile(ctx) {
+        (width / 18.0).clamp(1.0, 28.0)
+    } else {
+        24.0
+    }
 }
 
 /// Input field width.
@@ -42,13 +52,32 @@ pub fn is_mobile(ctx: &egui::Context) -> bool {
         }
     }
 
+    get_screen_width(ctx) < 600.0
+}
+
+pub fn get_screen_width(ctx: &egui::Context) -> f32 {
     ctx.input(|i| {
-        // Many mobile devices report as "tablet" or "mobile" in screen_reader
-        // But more reliably, we can check the size.
         i.viewport()
             .outer_rect
-            .is_some_and(|rect| rect.width() < 600.0)
-    }) || ctx.content_rect().width() < 600.0
+            .map(|rect| rect.width())
+            .unwrap_or_else(|| ctx.content_rect().width())
+    })
+}
+
+pub fn get_dynamic_zoom_factor(ctx: &egui::Context) -> f32 {
+    if !is_mobile(ctx) {
+        return 1.0;
+    }
+
+    let width = get_screen_width(ctx);
+
+    // Baseline width for mobile scaling (e.g., iPhone SE-ish width)
+    let baseline_width = 375.0;
+
+    // We want a zoom factor that scales with width, but doesn't go too crazy.
+    // If width is 375, zoom is 1.0.
+    // If width is 320, zoom is (320/375) * 1.0 = 0.85.
+    (width / baseline_width).clamp(0.8, 1.2)
 }
 
 /// Text color for the UI.
@@ -149,17 +178,24 @@ pub fn render_input(
     let mut edit_text = egui::TextEdit::singleline(text)
         .password(is_password)
         .desired_width(if is_mobile(&ctx) {
-            160.0
+            ui.available_width() - 40.0
         } else {
             f32::INFINITY
         }) // More conservative width on mobile
-        .margin(egui::Margin::symmetric(8, 4));
+        .margin(egui::Margin::symmetric(8, 12));
 
     if let Some(hint) = text_hint {
         edit_text = edit_text.hint_text(hint);
     }
     ui.add_sized(
-        [if is_mobile(&ctx) { 160.0 } else { INPUT_WIDTH }, height],
+        [
+            if is_mobile(&ctx) {
+                ui.available_width() - 40.0
+            } else {
+                INPUT_WIDTH
+            },
+            height,
+        ],
         edit_text,
     );
     ui.add_space(WIDGET_SPACING_BASE);
@@ -180,7 +216,7 @@ pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callba
     let theme = ctx.theme();
 
     let padding = if is_mobile(ctx) {
-        egui::vec2(12.0, 8.0)
+        egui::vec2(16.0, 12.0)
     } else {
         egui::vec2(2.0 * WIDGET_SPACING_BASE, WIDGET_SPACING_BASE)
     };
@@ -192,7 +228,9 @@ pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callba
     };
 
     let text_label = if is_mobile(ctx) {
-        text_label.size(16.0)
+        let width = get_screen_width(ctx);
+        let size = (width / 20.0).clamp(16.0, 20.0);
+        text_label.size(size)
     } else {
         text_label
     };
@@ -202,7 +240,14 @@ pub fn render_button(ui: &mut egui::Ui, ctx: &egui::Context, label: &str, callba
         Theme::Light => egui::Button::new(text_label).fill(BUTTON_BG_COLOR),
     };
 
-    if ui.add(button).clicked() {
+    let button = if is_mobile(ctx) {
+        button.min_size(egui::vec2(ui.available_width() - 20.0, 48.0)) // Increased from 44.0
+    } else {
+        button
+    };
+
+    let response = ui.add(button);
+    if response.clicked() {
         callback();
     }
 }

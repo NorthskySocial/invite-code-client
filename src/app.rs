@@ -17,6 +17,7 @@ use egui_extras::{Column, TableBuilder};
 use reqwest::cookie::Jar;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -63,6 +64,7 @@ pub struct InviteCodeManager {
     password: String,
     generated_otp: bool,
     create_code_count_str: String,
+    selected_codes: HashSet<String>,
 }
 
 impl Default for InviteCodeManager {
@@ -101,6 +103,7 @@ impl Default for InviteCodeManager {
             password: "".to_string(),
             generated_otp: false,
             create_code_count_str: "1".to_string(),
+            selected_codes: HashSet::new(),
         }
     }
 
@@ -134,13 +137,14 @@ impl Default for InviteCodeManager {
             password: "".to_string(),
             generated_otp: false,
             create_code_count_str: "1".to_string(),
+            selected_codes: HashSet::new(),
         }
     }
 }
 
 impl eframe::App for InviteCodeManager {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.set_zoom_factor(1.0);
+        ctx.set_zoom_factor(styles::get_dynamic_zoom_factor(ctx));
         egui::CentralPanel::default().show(ctx, |ui| {
             // Basic window styling.
             styles::set_text_color(ui);
@@ -153,22 +157,32 @@ impl eframe::App for InviteCodeManager {
 
             match &mut self.page {
                 Page::Home => {
-                    self.show_home(ui);
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            self.show_home(ui);
+                        });
                 }
                 Page::Login => {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        self.show_login(ui, ctx);
-                    });
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            self.show_login(ui, ctx);
+                        });
                 }
                 Page::QrVerify => {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        self.show_verify_qr(ui, ctx);
-                    });
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            self.show_verify_qr(ui, ctx);
+                        });
                 }
                 Page::QrValidate => {
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        self.show_validate_qr(ui, ctx);
-                    });
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            self.show_validate_qr(ui, ctx);
+                        });
                 }
             }
         });
@@ -226,6 +240,7 @@ impl InviteCodeManager {
                 .striped(true)
                 .resizable(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .column(Column::initial(30.0).at_least(30.0).resizable(false)) // Checkbox
                 .column(Column::initial(100.0).at_least(80.0).resizable(true)) // Code
                 .column(Column::initial(150.0).at_least(120.0).resizable(true)) // Created At
                 .column(Column::auto().at_least(60.0).resizable(true)) // Used
@@ -238,6 +253,24 @@ impl InviteCodeManager {
 
             table
                 .header(30.0, |mut header| {
+                    header.col(|ui| {
+                        let mut all_selected = !self.filtered_codes.is_empty()
+                            && self
+                                .filtered_codes
+                                .iter()
+                                .all(|c| self.selected_codes.contains(&c.code));
+                        if ui.checkbox(&mut all_selected, "").clicked() {
+                            if all_selected {
+                                for code in &self.filtered_codes {
+                                    self.selected_codes.insert(code.code.clone());
+                                }
+                            } else {
+                                for code in &self.filtered_codes {
+                                    self.selected_codes.remove(&code.code);
+                                }
+                            }
+                        }
+                    });
                     header.col(|ui| {
                         ui.vertical_centered(|ui| {
                             ui.strong("Code");
@@ -276,10 +309,21 @@ impl InviteCodeManager {
                 })
                 .body(|body| {
                     let codes = self.filtered_codes.clone();
+                    let mut selected_codes = self.selected_codes.clone();
                     body.rows(40.0, codes.len(), |mut row| {
                         let index = row.index();
                         let code = &codes[index];
 
+                        row.col(|ui| {
+                            let mut is_selected = selected_codes.contains(&code.code);
+                            if ui.checkbox(&mut is_selected, "").clicked() {
+                                if is_selected {
+                                    selected_codes.insert(code.code.clone());
+                                } else {
+                                    selected_codes.remove(&code.code);
+                                }
+                            }
+                        });
                         row.col(|ui| {
                             ui.label(RichText::new(&code.code).monospace());
                         });
@@ -331,75 +375,86 @@ impl InviteCodeManager {
                             });
                         });
                     });
+                    self.selected_codes = selected_codes;
                 });
         }
     }
 
     fn invite_list_mobile_ui(&mut self, ui: &mut Ui) {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.vertical(|ui| {
-                let codes = self.filtered_codes.clone();
-                for code in codes {
-                    styles::render_card(ui, |ui| {
-                        ui.vertical(|ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("Code:").strong());
-                                ui.label(RichText::new(&code.code).monospace());
-                            });
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("Created:").strong());
-                                ui.label(Self::format_datetime(&code.created_at));
-                            });
-
-                            let used = code.available < 1 || !code.uses.is_empty();
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("Used:").strong());
-                                let text = if used { "✔ Yes" } else { "❌ No" };
-                                let color = if used {
-                                    egui::Color32::GREEN
-                                } else {
-                                    ui.visuals().text_color()
-                                };
-                                ui.label(RichText::new(text).color(color));
-                            });
-
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("Disabled:").strong());
-                                let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
-                                let color = if code.disabled {
-                                    egui::Color32::RED
-                                } else {
-                                    ui.visuals().text_color()
-                                };
-                                ui.label(RichText::new(text).color(color));
-                            });
-
-                            if let Some(usage) = code.uses.first() {
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                ui.vertical(|ui| {
+                    let codes = self.filtered_codes.clone();
+                    for code in codes {
+                        styles::render_card(ui, |ui| {
+                            ui.vertical(|ui| {
                                 ui.horizontal(|ui| {
-                                    ui.label(RichText::new("Used By:").strong());
-                                    ui.label(&usage.used_by);
+                                    let mut is_selected = self.selected_codes.contains(&code.code);
+                                    if ui.checkbox(&mut is_selected, "").clicked() {
+                                        if is_selected {
+                                            self.selected_codes.insert(code.code.clone());
+                                        } else {
+                                            self.selected_codes.remove(&code.code);
+                                        }
+                                    }
+                                    ui.label(RichText::new("Code:").strong());
+                                    ui.label(RichText::new(&code.code).monospace());
                                 });
                                 ui.horizontal(|ui| {
-                                    ui.label(RichText::new("Used At:").strong());
-                                    ui.label(Self::format_datetime(&usage.used_at));
+                                    ui.label(RichText::new("Created:").strong());
+                                    ui.label(Self::format_datetime(&code.created_at));
                                 });
-                            }
 
-                            ui.add_space(4.0);
-                            let ctx = ui.ctx().clone();
-                            if !code.disabled {
-                                styles::render_button(ui, &ctx, "Disable", || {
-                                    self.disable_invite_code(code.code.clone());
+                                let used = code.available < 1 || !code.uses.is_empty();
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Used:").strong());
+                                    let text = if used { "✔ Yes" } else { "❌ No" };
+                                    let color = if used {
+                                        egui::Color32::GREEN
+                                    } else {
+                                        ui.visuals().text_color()
+                                    };
+                                    ui.label(RichText::new(text).color(color));
                                 });
-                            } else {
-                                ui.add_enabled(false, egui::Button::new("Disabled"));
-                            }
+
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Disabled:").strong());
+                                    let text = if code.disabled { "🚫 Yes" } else { "✅ No" };
+                                    let color = if code.disabled {
+                                        egui::Color32::RED
+                                    } else {
+                                        ui.visuals().text_color()
+                                    };
+                                    ui.label(RichText::new(text).color(color));
+                                });
+
+                                if let Some(usage) = code.uses.first() {
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new("Used By:").strong());
+                                        ui.label(&usage.used_by);
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new("Used At:").strong());
+                                        ui.label(Self::format_datetime(&usage.used_at));
+                                    });
+                                }
+
+                                ui.add_space(4.0);
+                                let ctx = ui.ctx().clone();
+                                if !code.disabled {
+                                    styles::render_button(ui, &ctx, "Disable", || {
+                                        self.disable_invite_code(code.code.clone());
+                                    });
+                                } else {
+                                    ui.add_enabled(false, egui::Button::new("Disabled"));
+                                }
+                            });
                         });
-                    });
-                    ui.add_space(8.0);
-                }
+                        ui.add_space(8.0);
+                    }
+                });
             });
-        });
     }
 
     pub fn show_home(&mut self, ui: &mut Ui) {
@@ -417,6 +472,11 @@ impl InviteCodeManager {
 
         // 2. Render the top controls in a standard vertical layout
         ui.vertical(|ui| {
+            if is_mobile {
+                ui.set_max_width(ui.available_width());
+            } else {
+                ui.set_max_width(800.0); // Limit width on desktop for better readability
+            }
             ui.vertical_centered(|ui| {
                 if !self.error_message.is_empty() {
                     styles::render_error(ui, &self.error_message);
@@ -439,13 +499,15 @@ impl InviteCodeManager {
 
                     ui.horizontal(|ui| {
                         ui.label(RichText::new("Filter:").strong());
-                        if ui
-                            .add(
-                                styles::render_base_input(&mut self.search_term, false, true)
-                                    .hint_text("Search..."),
-                            )
-                            .changed()
-                        {
+                        let filter_input =
+                            styles::render_base_input(&mut self.search_term, false, true)
+                                .hint_text("Search...");
+                        let filter_input = if is_mobile {
+                            filter_input.desired_width(ui.available_width() - 80.0)
+                        } else {
+                            filter_input
+                        };
+                        if ui.add(filter_input).changed() {
                             self.filter_invites();
                         }
                     });
@@ -497,7 +559,7 @@ impl InviteCodeManager {
                         ui.label(RichText::new("Count:").strong());
                         ui.add(
                             egui::TextEdit::singleline(&mut self.create_code_count_str)
-                                .desired_width(40.0),
+                                .desired_width(if is_mobile { 60.0 } else { 40.0 }),
                         );
                     });
 
@@ -510,6 +572,24 @@ impl InviteCodeManager {
                         self.create_invite_code();
                         self.get_invite_codes();
                     });
+
+                    if !self.selected_codes.is_empty() {
+                        if is_mobile {
+                            ui.add_space(8.0);
+                        } else {
+                            ui.separator();
+                        }
+                        let ctx = ui.ctx().clone();
+                        let count = self.selected_codes.len();
+                        styles::render_button(
+                            ui,
+                            &ctx,
+                            &format!("📤 Export ({})", count),
+                            || {
+                                self.export_selected_codes(&ctx);
+                            },
+                        );
+                    }
                 };
 
                 let available_width = ui.available_width();
@@ -591,6 +671,7 @@ impl InviteCodeManager {
 
     fn filter_invites(&mut self) {
         self.filtered_codes.clear();
+        self.selected_codes.clear();
         let search_term = self.search_term.to_lowercase();
         for code in self.codes.clone() {
             // Search filter
@@ -618,6 +699,13 @@ impl InviteCodeManager {
                 self.filtered_codes.push(code.clone());
             }
         }
+    }
+
+    fn export_selected_codes(&mut self, ctx: &egui::Context) {
+        let codes: Vec<String> = self.selected_codes.iter().cloned().collect();
+        let export_text = codes.join("\n");
+        ctx.copy_text(export_text);
+        self.selected_codes.clear();
     }
 
     fn disable_invite_code(&mut self, code: String) {
@@ -890,7 +978,11 @@ impl InviteCodeManager {
 
         ui.vertical_centered(|ui| {
             styles::render_card(ui, |ui| {
-                ui.set_max_width(400.0);
+                if styles::is_mobile(ui.ctx()) {
+                    ui.set_max_width(ui.available_width());
+                } else {
+                    ui.set_max_width(400.0);
+                }
                 ui.vertical_centered(|ui| {
                     styles::render_input(
                         ui,
