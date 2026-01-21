@@ -7,7 +7,7 @@ name = "InviteCodeClient"
 version = "0.1.0"
 dependencies = [
  "chrono",
-    "crossbeam-channel",
+ "crossbeam-channel",
  "eframe",
  "egui_extras",
  "env_logger",
@@ -896,7 +896,7 @@ version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
 dependencies = [
-    "crossbeam-utils",
+ "crossbeam-utils",
 ]
 
 [[package]]
