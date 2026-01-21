@@ -1261,7 +1261,9 @@ mod tests {
             6,
             1,
             30,
-            Secret::Raw(test_secret.as_bytes().to_vec()).to_bytes().unwrap(),
+            Secret::Raw(test_secret.as_bytes().to_vec())
+                .to_bytes()
+                .unwrap(),
             Some("Northsky".to_string()),
             test_username.to_string(),
         )
