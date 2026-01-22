@@ -60,7 +60,7 @@ pub fn get_screen_width(ctx: &egui::Context) -> f32 {
         i.viewport()
             .outer_rect
             .map(|rect| rect.width())
-            .unwrap_or_else(|| ctx.content_rect().width())
+            .unwrap_or_else(|| i.content_rect().width())
     })
 }
 

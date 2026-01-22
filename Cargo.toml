@@ -20,19 +20,22 @@ serde = { version = "1.0.219", features = ["derive"] }
 totp-rs = { version = "5.6.0" , features = ["qr"]}
 log = "0.4.26"
 tracing = "0.1.41"
-chrono = { version = "0.4.40", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde", "wasmbind"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
 tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "time"] }
+rfd = "0.15"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.104"
 wasm-bindgen-futures = "0.4.50"
-web-sys = { version = "0.3.70", features = ["Navigator", "Clipboard", "Window"] }              # to access the DOM (to hide the loading text)
-tokio = { version = "1.40.0", features = ["rt", "time"] }
+js-sys = "0.3.70"
+web-sys = { version = "0.3.70", features = ["Navigator", "Clipboard", "Window", "Document", "Element", "HtmlAnchorElement", "Url", "Blob", "BlobPropertyBag"] }              # to access the DOM (to hide the loading text)
+tokio = { version = "1.40.0", features = ["rt"] }
 crossbeam-channel = "0.5.14"
 
 # cross compilation
