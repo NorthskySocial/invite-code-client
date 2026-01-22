@@ -27,12 +27,14 @@ getrandom = { version = "0.2", features = ["js"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
 tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "time"] }
+rfd = "0.15"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.104"
 wasm-bindgen-futures = "0.4.50"
-web-sys = { version = "0.3.70", features = ["Navigator", "Clipboard", "Window"] }              # to access the DOM (to hide the loading text)
+js-sys = "0.3.70"
+web-sys = { version = "0.3.70", features = ["Navigator", "Clipboard", "Window", "Document", "Element", "HtmlAnchorElement", "Url", "Blob", "BlobPropertyBag"] }              # to access the DOM (to hide the loading text)
 tokio = { version = "1.40.0", features = ["rt"] }
 crossbeam-channel = "0.5.14"
 

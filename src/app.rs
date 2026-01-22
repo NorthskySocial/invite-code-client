@@ -67,6 +67,7 @@ pub struct InviteCodeManager {
     password: String,
     generated_otp: bool,
     create_code_count_str: String,
+    export_code_count_str: String,
     selected_codes: HashSet<String>,
 }
 
@@ -106,6 +107,7 @@ impl Default for InviteCodeManager {
             password: "".to_string(),
             generated_otp: false,
             create_code_count_str: "1".to_string(),
+            export_code_count_str: "1".to_string(),
             selected_codes: HashSet::new(),
         }
     }
@@ -140,6 +142,7 @@ impl Default for InviteCodeManager {
             password: "".to_string(),
             generated_otp: false,
             create_code_count_str: "1".to_string(),
+            export_code_count_str: "1".to_string(),
             selected_codes: HashSet::new(),
         }
     }
@@ -576,6 +579,45 @@ impl InviteCodeManager {
                         self.get_invite_codes();
                     });
 
+                    if is_mobile {
+                        ui.add_space(8.0);
+                    } else {
+                        ui.separator();
+                    }
+
+                    let ctx = ui.ctx().clone();
+                    styles::render_button(ui, &ctx, "📥 Export all", || {
+                        let codes: Vec<String> =
+                            self.codes.iter().map(|c| c.code.clone()).collect();
+                        self.download_txt(codes, &ctx);
+                    });
+
+                    if is_mobile {
+                        ui.add_space(8.0);
+                    } else {
+                        ui.separator();
+                    }
+
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("Export N:").strong());
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.export_code_count_str)
+                                .desired_width(if is_mobile { 60.0 } else { 40.0 }),
+                        );
+                    });
+
+                    let ctx = ui.ctx().clone();
+                    styles::render_button(ui, &ctx, "📥 Export .txt", || {
+                        let count = self.export_code_count_str.parse::<usize>().unwrap_or(0);
+                        let codes: Vec<String> = self
+                            .codes
+                            .iter()
+                            .take(count)
+                            .map(|c| c.code.clone())
+                            .collect();
+                        self.download_txt(codes, &ctx);
+                    });
+
                     if !self.selected_codes.is_empty() {
                         if is_mobile {
                             ui.add_space(8.0);
@@ -587,7 +629,7 @@ impl InviteCodeManager {
                         styles::render_button(
                             ui,
                             &ctx,
-                            &format!("📤 Export ({})", count),
+                            &format!("📥 Export selection ({})", count),
                             || {
                                 self.export_selected_codes(&ctx);
                             },
@@ -704,9 +746,55 @@ impl InviteCodeManager {
 
     fn export_selected_codes(&mut self, ctx: &egui::Context) {
         let codes: Vec<String> = self.selected_codes.iter().cloned().collect();
-        let export_text = codes.join("\n");
-        ctx.copy_text(export_text);
+        self.download_txt(codes, ctx);
         self.selected_codes.clear();
+    }
+
+    fn download_txt(&self, codes: Vec<String>, ctx: &egui::Context) {
+        let export_text = codes.join("\n");
+        ctx.copy_text(export_text.clone());
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Some(document) = window.document() {
+                    let parts = js_sys::Array::new();
+                    parts.push(&wasm_bindgen::JsValue::from_str(&export_text));
+
+                    let mut blob_props = web_sys::BlobPropertyBag::new();
+                    blob_props.set_type("text/plain");
+
+                    if let Ok(blob) =
+                        web_sys::Blob::new_with_str_sequence_and_options(&parts, &blob_props)
+                    {
+                        if let Ok(url) = web_sys::Url::create_object_url_with_blob(&blob) {
+                            if let Ok(a) = document.create_element("a") {
+                                if let Ok(a) =
+                                    wasm_bindgen::JsCast::dyn_into::<web_sys::HtmlAnchorElement>(a)
+                                {
+                                    a.set_href(&url);
+                                    a.set_download("invite_codes.txt");
+                                    a.click();
+                                    let _ = web_sys::Url::revoke_object_url(&url);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let handle = rfd::FileDialog::new()
+                .set_file_name("invite_codes.txt")
+                .add_filter("Text", &["txt"])
+                .save_file();
+
+            if let Some(path) = handle {
+                let _ = std::fs::write(path, export_text);
+            }
+        }
     }
 
     fn disable_invite_code(&mut self, code: String) {
