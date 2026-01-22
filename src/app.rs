@@ -960,7 +960,7 @@ impl InviteCodeManager {
                 30,
                 Secret::Encoded(res.0).to_bytes().unwrap(),
                 Some("Northsky".to_string()),
-                "Northsky".to_string(),
+                self.username.clone(),
             )
             .unwrap();
             let qr_code = totp.get_qr_png().unwrap();
@@ -1333,4 +1333,31 @@ struct GenerateOtpResponse {
 struct LoginRequest {
     pub username: String,
     pub password: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_totp_uses_username_as_account_name() {
+        let test_username = "testuser@example.com";
+        let test_secret = "JBSWY3DPEHPK3PXP";
+
+        let totp = TOTP::new(
+            Algorithm::SHA1,
+            6,
+            1,
+            30,
+            Secret::Raw(test_secret.as_bytes().to_vec())
+                .to_bytes()
+                .unwrap(),
+            Some("Northsky".to_string()),
+            test_username.to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(totp.account_name, test_username);
+        assert_eq!(totp.issuer, Some("Northsky".to_string()));
+    }
 }
