@@ -1,6 +1,6 @@
 [build]
 filehash = false
-sri = false
+no_sri = true
 
 [build.config]
 RUSTFLAGS = "--cfg=web_sys_unstable_apis --cfg=parking_lot_core_wasm_bindgen"
