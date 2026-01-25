@@ -1,7 +1,32 @@
-# <h1> Invite Code Client </h1>
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/licenses/mit)
+# Invite Code Client
 
-## Overview
-Frontend UI Client to interact with the Invite Code Manager
+Frontend UI Client to interact with the Invite Code Manager. Built with React and TypeScript.
 
-![screenshot.png](assets/screenshot.png)
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or later recommended)
+- npm
+
+### Installation
+
+```bash
+npm install
+```
+
+### Development
+
+```bash
+npm run dev
+```
+
+### Production Build
+
+```bash
+npm run build
+```
+
+## License
+
+MIT
