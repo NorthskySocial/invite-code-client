@@ -50,6 +50,7 @@ function App() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
+  const [handles, setHandles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (token) {
@@ -79,6 +80,9 @@ function App() {
       const data = response.data?.codes || [];
       setInvites(Array.isArray(data) ? data : []);
       setError(null);
+      if (Array.isArray(data)) {
+        resolveHandles(data);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch invites');
       if (err.response?.status === 401) {
@@ -93,7 +97,7 @@ function App() {
     if (invite.disabled) {
       return 'Disabled';
     }
-    if (invite.available === 0) {
+    if (invite.available === 0 || (invite.uses && invite.uses.length > 0)) {
       return 'Used';
     }
     return 'Unused';
@@ -104,6 +108,43 @@ function App() {
       return invite.uses[0].usedAt;
     }
     return undefined;
+  };
+
+  const getUsedBy = (invite: InviteCode): string | undefined => {
+    if (invite.uses && invite.uses.length > 0) {
+      return invite.uses[0].usedBy;
+    }
+    return undefined;
+  };
+
+  const resolveHandles = async (invitesList: InviteCode[]) => {
+    const didsToResolve = new Set<string>();
+    invitesList.forEach(invite => {
+      const usedBy = getUsedBy(invite);
+      if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
+        didsToResolve.add(usedBy);
+      }
+    });
+
+    for (const did of didsToResolve) {
+      try {
+        const response = await apiService.resolveDid(did);
+        // PLC directory response has 'alsoKnownAs' array with 'at://handle'
+        const alsoKnownAs = response.data?.alsoKnownAs || [];
+        const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
+        if (handleUri) {
+          const handle = handleUri.replace('at://', '');
+          setHandles(prev => ({...prev, [did]: handle}));
+        } else {
+          // If no handle found, we might want to store the DID itself or a placeholder
+          setHandles(prev => ({...prev, [did]: did}));
+        }
+      } catch (err) {
+        console.error(`Failed to resolve DID: ${did}`, err);
+        // Optionally store the DID so we don't keep trying
+        setHandles(prev => ({...prev, [did]: did}));
+      }
+    }
   };
 
   const applyFilter = () => {
@@ -255,8 +296,8 @@ function App() {
       <div
         className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200">
         <div
-          className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md border dark:border-gray-700">
-          <div className="flex flex-col items-center mb-6 relative">
+          className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-lg w-full max-w-md border dark:border-gray-700">
+          <div className="flex flex-col items-center mb-8 relative">
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="absolute right-0 top-0 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
@@ -264,7 +305,7 @@ function App() {
             >
               {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
-            <div className="bg-blue-600 p-3 rounded-full mb-4">
+            <div className="bg-blue-600 p-4 rounded-2xl mb-4 shadow-blue-500/20 shadow-lg">
               <LogIn className="text-white w-8 h-8"/>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Invites Client</h1>
@@ -272,31 +313,36 @@ function App() {
               to access the manager</p>
           </div>
 
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
               <input
                 type="text"
                 placeholder="Username"
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
               />
             </div>
-            <div className="mb-4">
+            <div>
               <input
                 type="password"
                 placeholder="Password"
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            {error && (
+              <div
+                className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg">
+                <p className="text-red-500 text-sm text-center">{error}</p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98]"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
@@ -310,47 +356,29 @@ function App() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
       {/* Header */}
       <nav
-        className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 flex justify-between items-center sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="text-blue-600 w-6 h-6"/>
-          <span className="font-bold text-lg text-gray-800 dark:text-white">Invites Manager</span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
-            title="Toggle Theme"
-          >
-            {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
-          </button>
-          <button
-            onClick={() => {
-              setError(null);
-              handleGenerateOtp();
-              setPage('QrVerify');
-            }}
-            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            title="Setup OTP"
-          >
-            <QrCode className="w-5 h-5"/>
-          </button>
-          <button
-            onClick={() => {
-              setError(null);
-              setPage('QrValidate');
-            }}
-            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            title="Validate OTP"
-          >
-            <ShieldCheck className="w-5 h-5"/>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-            title="Logout"
-          >
-            <LogOut className="w-5 h-5"/>
-          </button>
+        className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7"/>
+            <span
+              className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap">Invites Manager</span>
+          </div>
+          <div className="flex gap-1 md:gap-2">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition min-w-[40px] min-h-[40px] flex items-center justify-center"
+              title="Toggle Theme"
+            >
+              {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded min-w-[40px] min-h-[40px] flex items-center justify-center"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5"/>
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -359,32 +387,33 @@ function App() {
           <div className="space-y-6">
             {/* Controls */}
             <div
-              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 flex flex-wrap gap-4 items-center justify-between">
+              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="1"
                   max="100"
-                  className="w-20 p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full sm:w-20 p-2.5 sm:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   value={inviteCount}
                   onChange={(e) => setInviteCount(parseInt(e.target.value))}
                 />
                 <button
                   onClick={handleCreateInvites}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700 transition"
+                  className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded flex items-center justify-center gap-2 hover:bg-blue-700 transition font-medium"
                 >
                   <Plus className="w-4 h-4"/> Generate
                 </button>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-gray-400"/>
+              <div
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 relative">
+                  <Filter className="w-4 h-4 text-gray-400 absolute left-3"/>
                   <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value as FilterStatus)}
-                    className="p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                    className="w-full sm:w-auto pl-10 pr-4 py-2.5 sm:py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded appearance-none"
                   >
                     <option value="All">All Status</option>
                     <option value="Unused">Unused</option>
@@ -393,29 +422,31 @@ function App() {
                   </select>
                 </div>
 
-                <button
-                  onClick={downloadTxt}
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4"/> Export
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={downloadTxt}
+                    className="flex-1 sm:flex-none p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4"/> Export
+                  </button>
 
-                <button
-                  onClick={fetchInvites}
-                  disabled={loading}
-                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/>
-                </button>
+                  <button
+                    onClick={fetchInvites}
+                    disabled={loading}
+                    className="p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 min-w-[44px] flex items-center justify-center"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/>
+                  </button>
+                </div>
               </div>
             </div>
 
             {error &&
                 <p className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">{error}</p>}
 
-            {/* Table */}
+            {/* Desktop Table - Hidden on Mobile */}
             <div
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
+              className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
@@ -433,6 +464,10 @@ function App() {
                     </th>
                     <th
                       className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Used
+                      By
+                    </th>
+                    <th
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Used
                       At
                     </th>
                     <th
@@ -444,6 +479,8 @@ function App() {
                   {filteredInvites.map((invite) => {
                     const status = getStatus(invite);
                     const usedAt = getUsedAt(invite);
+                    const usedBy = getUsedBy(invite);
+                    const resolvedHandle = usedBy ? handles[usedBy] : null;
                     return (
                       <tr key={invite.code}
                         className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
@@ -452,7 +489,7 @@ function App() {
                         {invite.code}
                         <button
                           onClick={() => copyToClipboard(invite.code)}
-                          className="text-gray-400 hover:text-blue-600"
+                          className="text-gray-400 hover:text-blue-600 p-1"
                         >
                           {copied === invite.code ? <Check className="w-4 h-4 text-green-500"/> :
                             <Copy className="w-4 h-4"/>}
@@ -470,6 +507,22 @@ function App() {
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {formatDate(invite.createdAt)}
                       </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {resolvedHandle ? (
+                            <a
+                              href={`https://bsky.app/profile/${resolvedHandle}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {resolvedHandle}
+                            </a>
+                          ) : usedBy ? (
+                            <span className="font-mono text-xs" title={usedBy}>
+                            {usedBy.substring(0, 15)}...
+                          </span>
+                          ) : '-'}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {formatDate(usedAt)}
                       </td>
@@ -477,7 +530,7 @@ function App() {
                         {status === 'Unused' && (
                           <button
                             onClick={() => handleDisableInvite(invite.code)}
-                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition"
+                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
                             title="Disable"
                           >
                             <Trash2 className="w-4 h-4"/>
@@ -491,42 +544,131 @@ function App() {
                 </table>
               </div>
             </div>
+
+            {/* Mobile Cards - Shown on Mobile */}
+            <div className="md:hidden space-y-4">
+              {filteredInvites.map((invite) => {
+                const status = getStatus(invite);
+                const usedAt = getUsedAt(invite);
+                const usedBy = getUsedBy(invite);
+                const resolvedHandle = usedBy ? handles[usedBy] : null;
+                return (
+                  <div key={invite.code}
+                       className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div
+                        className="font-mono text-lg font-bold dark:text-white flex items-center gap-2">
+                        {invite.code}
+                        <button
+                          onClick={() => copyToClipboard(invite.code)}
+                          className="text-gray-400 hover:text-blue-600 p-2"
+                        >
+                          {copied === invite.code ? <Check className="w-5 h-5 text-green-500"/> :
+                            <Copy className="w-5 h-5"/>}
+                        </button>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                          status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
+                        {status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Created
+                          At</p>
+                        <p className="dark:text-gray-300">{formatDate(invite.createdAt)}</p>
+                      </div>
+                      <div>
+                        <p
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Used
+                          By</p>
+                        <p className="dark:text-gray-300 truncate">
+                          {resolvedHandle ? (
+                            <a
+                              href={`https://bsky.app/profile/${resolvedHandle}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              {resolvedHandle}
+                            </a>
+                          ) : usedBy ? (
+                            <span className="font-mono text-xs" title={usedBy}>
+                              {usedBy.substring(0, 15)}...
+                            </span>
+                          ) : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Used
+                          At</p>
+                        <p className="dark:text-gray-300">{formatDate(usedAt)}</p>
+                      </div>
+                    </div>
+                    {status === 'Unused' && (
+                      <div className="pt-2 border-t dark:border-gray-700">
+                        <button
+                          onClick={() => handleDisableInvite(invite.code)}
+                          className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded transition border border-red-100 dark:border-red-900/30"
+                        >
+                          <Trash2 className="w-4 h-4"/> Disable Invite
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredInvites.length === 0 && (
+                <div
+                  className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400">No invite codes found</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {page === 'QrVerify' && (
-          <div className="max-w-md mx-auto space-y-6 text-center">
+          <div className="max-w-md mx-auto space-y-6 text-center px-2">
             <h2 className="text-xl font-bold dark:text-white">Setup Multi-Factor Authentication</h2>
             {qrCode && (
-              <div className="bg-white p-4 rounded-lg shadow-md inline-block">
-                <img src={qrCode} alt="OTP QR Code" className="mx-auto"/>
+              <div className="bg-white p-4 rounded-xl shadow-md inline-block">
+                <img src={qrCode} alt="OTP QR Code" className="mx-auto w-48 h-48 md:w-64 md:h-64"/>
               </div>
             )}
-            <p className="text-gray-600 dark:text-gray-400">Scan this QR code with your
+            <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">Scan this QR code
+              with your
               authenticator app, then enter the code below to verify.</p>
             <div className="space-y-4">
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="000000"
-                className="w-full p-3 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-center text-2xl tracking-widest"
+                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
               />
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setError(null);
                     setPage('Home');
                   }}
-                  className="flex-1 p-3 border dark:border-gray-600 dark:text-white rounded font-semibold hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="flex-1 p-4 border dark:border-gray-600 dark:text-white rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleVerifyOtp}
                   disabled={loading}
-                  className="flex-1 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50"
                 >
                   {loading ? 'Verifying...' : 'Verify'}
                 </button>
@@ -536,20 +678,26 @@ function App() {
         )}
 
         {page === 'QrValidate' && (
-          <div className="max-w-md mx-auto space-y-6 text-center">
-            <h2 className="text-xl font-bold dark:text-white">Two-Factor Authentication</h2>
+          <div className="max-w-md mx-auto space-y-6 text-center px-2">
+            <div className="bg-blue-600 p-4 rounded-2xl mx-auto w-fit shadow-lg shadow-blue-500/20">
+              <ShieldCheck className="text-white w-10 h-10"/>
+            </div>
+            <h2 className="text-2xl font-bold dark:text-white">Two-Factor Authentication</h2>
             <p className="text-gray-600 dark:text-gray-400">Please enter the 6-digit code from your
               authenticator app.</p>
             <div className="space-y-4">
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="000000"
-                className="w-full p-3 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded text-center text-2xl tracking-widest"
+                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
+                autoFocus
               />
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setError(null);
@@ -559,14 +707,14 @@ function App() {
                       setPage('Login');
                     }
                   }}
-                  className="flex-1 p-3 border dark:border-gray-600 dark:text-white rounded font-semibold hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="flex-1 p-4 border dark:border-gray-600 dark:text-white rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleValidateOtp}
                   disabled={loading}
-                  className="flex-1 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50"
                 >
                   {loading ? 'Validating...' : 'Validate'}
                 </button>

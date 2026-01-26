@@ -70,10 +70,10 @@ describe('App Component', () => {
     fireEvent.click(screen.getByRole('button', {name: /Login/i}));
 
     await waitFor(() => {
-      expect(screen.getByText(/Invites Manager/i)).toBeInTheDocument();
+      expect(screen.getAllByText('ABC-123')[0]).toBeInTheDocument();
     });
 
-    expect(screen.getByText('ABC-123')).toBeInTheDocument();
+    expect(screen.getAllByText('ABC-123')[0]).toBeInTheDocument();
   });
 
   it('shows error on failed login', async () => {
@@ -132,17 +132,64 @@ describe('App Component', () => {
     fireEvent.click(screen.getByRole('button', {name: /Login/i}));
 
     await waitFor(() => {
-      expect(screen.getByText('INVALID-DATE')).toBeInTheDocument();
-      expect(screen.getByText('EMPTY-DATE')).toBeInTheDocument();
-      expect(screen.getByText('NULL-DATE')).toBeInTheDocument();
+      expect(screen.getAllByText('INVALID-DATE')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('EMPTY-DATE')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('NULL-DATE')[0]).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Invalid Date')).toBeInTheDocument();
+    expect(screen.getAllByText('Invalid Date')[0]).toBeInTheDocument();
     // 3 codes, each has 2 date columns.
+    // In each version (desktop/mobile), we have:
     // 1. INVALID-DATE: created_at='invalid' -> 'Invalid Date', used_at=undefined -> '-'
     // 2. EMPTY-DATE: created_at='' -> '-', used_at=undefined -> '-'
     // 3. NULL-DATE: created_at=valid -> '...', used_at=undefined -> '-'
-    // Total '-' should be 4
-    expect(screen.getAllByText('-')).toHaveLength(4);
+    // For USED-BY column:
+    // 1. INVALID-DATE: usedBy=undefined -> '-'
+    // 2. EMPTY-DATE: usedBy=undefined -> '-'
+    // 3. NULL-DATE: usedBy=undefined -> '-'
+    // So per code:
+    // INVALID-DATE: created_at='Invalid Date', used_at='-', usedBy='-'
+    // EMPTY-DATE: created_at='-', used_at='-', usedBy='-'
+    // NULL-DATE: created_at='...', used_at='-', usedBy='-'
+    // TOTAL '-' per code:
+    // INVALID-DATE: 2 '-'
+    // EMPTY-DATE: 3 '-'
+    // NULL-DATE: 2 '-'
+    // TOTAL per version: 7 '-'
+    // TOTAL for both versions: 14 '-'
+    expect(screen.getAllByText('-')).toHaveLength(14);
+  });
+
+  it('correctly identifies used codes based on the uses array', async () => {
+    server.use(
+      http.get('https://frontend.myapp.local/api/invite-codes', () => {
+        return HttpResponse.json({
+          codes: [
+            {
+              code: 'USED-VIA-ARRAY',
+              available: 1, // Still 1 according to API, but has uses
+              disabled: false,
+              forAccount: 'admin',
+              createdBy: 'admin',
+              createdAt: new Date().toISOString(),
+              uses: [{usedBy: 'did:plc:user1', usedAt: new Date().toISOString()}]
+            }
+          ]
+        });
+      })
+    );
+
+    render(<App/>);
+
+    fireEvent.change(screen.getByPlaceholderText(/Username/i), {target: {value: 'admin'}});
+    fireEvent.change(screen.getByPlaceholderText(/Password/i), {target: {value: 'password'}});
+    fireEvent.click(screen.getByRole('button', {name: /Login/i}));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('USED-VIA-ARRAY')[0]).toBeInTheDocument();
+    });
+
+    // Check if the status is 'Used' (might be multiple 'Used' badges, so we check at least one exists)
+    expect(screen.getAllByText('Used')[0]).toBeInTheDocument();
   });
 });

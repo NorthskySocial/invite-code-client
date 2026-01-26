@@ -38,8 +38,8 @@ const handlers = [
   }),
 
   http.post('https://frontend.myapp.local/api/create-invite-codes', async ({request}) => {
-    const {count} = await request.json() as { count: number };
-    return HttpResponse.json({message: `Created ${count} codes`});
+    const {codeCount} = await request.json() as { codeCount: number };
+    return HttpResponse.json({message: `Created ${codeCount} codes`});
   }),
 
   http.post('https://frontend.myapp.local/api/disable-invite-codes', async ({request}) => {
@@ -57,6 +57,13 @@ const handlers = [
 
   http.post('https://frontend.myapp.local/api/auth/otp/verify', () => {
     return HttpResponse.json({success: true});
+  }),
+
+  http.get('https://plc.directory/:did', ({params}) => {
+    return HttpResponse.json({
+      id: params.did,
+      alsoKnownAs: [`at://handle.test`]
+    });
   }),
 ];
 
@@ -109,5 +116,13 @@ describe('apiService', () => {
   it('verifyOtp should return success', async () => {
     const response = await apiService.verifyOtp('123456');
     expect(response.data).toEqual({success: true});
+  });
+
+  it('resolveDid should return PLC data', async () => {
+    const response = await apiService.resolveDid('did:plc:123');
+    expect(response.data).toEqual({
+      id: 'did:plc:123',
+      alsoKnownAs: ['at://handle.test']
+    });
   });
 });

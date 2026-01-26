@@ -70,4 +70,7 @@ export const apiService = {
 
   verifyOtp: (token: string) =>
     api.post('/api/auth/otp/verify', {token}),
+
+  resolveDid: (did: string) =>
+    axios.get(`https://plc.directory/${did}`),
 };
