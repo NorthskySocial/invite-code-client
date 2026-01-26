@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // baseURL: 'https://invites.northsky.social',
-  baseURL: 'http://localhost:9090',
+  baseURL: 'https://invites.northsky.social',
+  // baseURL: 'http://localhost:9090',
 });
 
 // Interceptor to add token to requests
@@ -23,7 +23,14 @@ export interface InviteCode {
 }
 
 export interface LoginResponse {
-  token: string;
+  token?: string;
+  requires_2fa?: boolean;
+  two_factor_token?: string;
+  username?: string;
+  otp_enabled?: boolean;
+  otp_verified?: boolean;
+  otp_base32?: string;
+  otp_auth_url?: string;
 }
 
 export interface GenerateOtpResponse {

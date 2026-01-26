@@ -34,6 +34,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [otpToken, setOtpToken] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
@@ -87,11 +88,34 @@ function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+    setTwoFactorToken(null);
+    setOtpToken('');
+    setQrCode(null);
     try {
       const response = await apiService.login(username, password);
-      localStorage.setItem('token', response.data.token);
-      setToken(response.data.token);
-      setPage('Home');
+      if (response.data.requires_2fa || (response.data.otp_enabled && response.data.otp_verified && !response.data.token)) {
+        setTwoFactorToken(response.data.two_factor_token || null);
+        setPage('QrValidate');
+        return;
+      }
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        setToken(response.data.token);
+
+        // If OTP is enabled but not verified, redirect to setup
+        if (response.data.otp_enabled && !response.data.otp_verified) {
+          if (response.data.otp_auth_url) {
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
+            setQrCode(qrCodeUrl);
+            setPage('QrVerify');
+          } else {
+            setPage('Home');
+          }
+        } else {
+          setPage('Home');
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
@@ -102,11 +126,16 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setToken(null);
+    setTwoFactorToken(null);
+    setQrCode(null);
+    setOtpToken('');
+    setError(null);
     setPage('Login');
   };
 
   const handleCreateInvites = async () => {
     setLoading(true);
+    setError(null);
     try {
       await apiService.createInviteCodes(inviteCount);
       fetchInvites();
@@ -118,6 +147,7 @@ function App() {
   };
 
   const handleDisableInvite = async (code: string) => {
+    setError(null);
     try {
       await apiService.disableInviteCode(code);
       fetchInvites();
@@ -128,6 +158,7 @@ function App() {
 
   const handleGenerateOtp = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await apiService.generateOtp();
       setQrCode(response.data.qr_code);
@@ -140,6 +171,7 @@ function App() {
 
   const handleVerifyOtp = async () => {
     setLoading(true);
+    setError(null);
     try {
       await apiService.verifyOtp(otpToken);
       alert('OTP Verified successfully');
@@ -153,10 +185,19 @@ function App() {
 
   const handleValidateOtp = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await apiService.validateOtp(otpToken);
-      alert('OTP Validated successfully');
-      setPage('Home');
+      const response = await apiService.validateOtp(otpToken);
+      const token = (response.data as any).token;
+      if (token) {
+        localStorage.setItem('token', token);
+        setToken(token);
+        alert('OTP Validated successfully');
+        setPage('Home');
+      } else {
+        alert('OTP Validated successfully');
+        setPage('Home');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'OTP Validation failed');
     } finally {
@@ -254,6 +295,7 @@ function App() {
           </button>
           <button
             onClick={() => {
+              setError(null);
               handleGenerateOtp();
               setPage('QrVerify');
             }}
@@ -263,7 +305,10 @@ function App() {
             <QrCode className="w-5 h-5"/>
           </button>
           <button
-            onClick={() => setPage('QrValidate')}
+            onClick={() => {
+              setError(null);
+              setPage('QrValidate');
+            }}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
             title="Validate OTP"
           >
@@ -433,9 +478,13 @@ function App() {
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
               />
+              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPage('Home')}
+                  onClick={() => {
+                    setError(null);
+                    setPage('Home');
+                  }}
                   className="flex-1 p-3 border dark:border-gray-600 dark:text-white rounded font-semibold hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Cancel
@@ -445,7 +494,7 @@ function App() {
                   disabled={loading}
                   className="flex-1 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700"
                 >
-                  Verify
+                  {loading ? 'Verifying...' : 'Verify'}
                 </button>
               </div>
             </div>
@@ -465,9 +514,17 @@ function App() {
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
               />
+              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPage('Home')}
+                  onClick={() => {
+                    setError(null);
+                    if (token) {
+                      setPage('Home');
+                    } else {
+                      setPage('Login');
+                    }
+                  }}
                   className="flex-1 p-3 border dark:border-gray-600 dark:text-white rounded font-semibold hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Cancel
@@ -477,7 +534,7 @@ function App() {
                   disabled={loading}
                   className="flex-1 bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700"
                 >
-                  Validate
+                  {loading ? 'Validating...' : 'Validate'}
                 </button>
               </div>
             </div>
