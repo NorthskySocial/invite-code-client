@@ -12455,3 +12455,5 @@
 /node_modules/yallist/README.md
 /node_modules/yallist/yallist.js
 /node_modules/.package-lock.json
+/release/
+/.output.txt

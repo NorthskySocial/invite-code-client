@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://invites.northsky.social',
+  // baseURL: 'https://invites.northsky.social',
+  baseURL: 'https://frontend.myapp.local/',
   // baseURL: 'http://localhost:9090',
+  withCredentials: true,
 });
 
 // Interceptor to add token to requests
@@ -14,12 +16,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export interface InviteCodes {
+  cursor?: string;
+  codes: InviteCode[];
+}
+
 export interface InviteCode {
-  id: string;
   code: string;
-  status: 'Used' | 'Unused' | 'Disabled';
-  created_at: string;
-  used_at?: string;
+  available: number;
+  disabled: boolean;
+  forAccount: string;
+  createdBy: string;
+  createdAt: string;
+  uses: {
+    usedBy: string;
+    usedAt: string;
+  }[];
 }
 
 export interface LoginResponse {
@@ -39,23 +51,23 @@ export interface GenerateOtpResponse {
 
 export const apiService = {
   login: (username: string, password: string) =>
-    api.post<LoginResponse>('/auth/login', {username, password}),
+    api.post<LoginResponse>('/api/auth/login', {username, password}),
 
   getInviteCodes: () =>
-    api.get<InviteCode[]>('/invite-codes'),
+    api.get<InviteCodes>('/api/invite-codes'),
 
   createInviteCodes: (count: number) =>
-    api.post('/create-invite-codes', {count}),
+    api.post('/api/create-invite-codes', {codeCount: count}),
 
   disableInviteCode: (code: string) =>
-    api.post('/disable-invite-codes', {code}),
+    api.post('/api/disable-invite-codes', {code}),
 
   generateOtp: () =>
-    api.get<GenerateOtpResponse>('/auth/otp/generate'),
+    api.get<GenerateOtpResponse>('/api/auth/otp/generate'),
 
   validateOtp: (token: string) =>
-    api.post('/auth/otp/validate', {token}),
+    api.post('/api/auth/otp/validate', {token}),
 
   verifyOtp: (token: string) =>
-    api.post('/auth/otp/verify', {token}),
+    api.post('/api/auth/otp/verify', {token}),
 };

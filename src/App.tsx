@@ -15,7 +15,18 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import {format} from 'date-fns';
+import {format, isValid} from 'date-fns';
+
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) {
+    return '-';
+  }
+  const date = new Date(dateString);
+  if (!isValid(date)) {
+    return 'Invalid Date';
+  }
+  return format(date, 'MMM d, yyyy HH:mm');
+};
 
 type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate';
 type FilterStatus = 'All' | 'Used' | 'Unused' | 'Disabled';
@@ -65,7 +76,8 @@ function App() {
     setLoading(true);
     try {
       const response = await apiService.getInviteCodes();
-      setInvites(response.data);
+      const data = response.data?.codes || [];
+      setInvites(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch invites');
@@ -77,11 +89,28 @@ function App() {
     }
   };
 
+  const getStatus = (invite: InviteCode): FilterStatus => {
+    if (invite.disabled) {
+      return 'Disabled';
+    }
+    if (invite.available === 0) {
+      return 'Used';
+    }
+    return 'Unused';
+  };
+
+  const getUsedAt = (invite: InviteCode): string | undefined => {
+    if (invite.uses && invite.uses.length > 0) {
+      return invite.uses[0].usedAt;
+    }
+    return undefined;
+  };
+
   const applyFilter = () => {
     if (filter === 'All') {
       setFilteredInvites(invites);
     } else {
-      setFilteredInvites(invites.filter(i => i.status === filter));
+      setFilteredInvites(invites.filter(i => getStatus(i) === filter));
     }
   };
 
@@ -231,6 +260,7 @@ function App() {
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="absolute right-0 top-0 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
+              aria-label="Toggle Theme"
             >
               {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
@@ -411,8 +441,11 @@ function App() {
                   </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {filteredInvites.map((invite) => (
-                    <tr key={invite.id}
+                  {filteredInvites.map((invite) => {
+                    const status = getStatus(invite);
+                    const usedAt = getUsedAt(invite);
+                    return (
+                      <tr key={invite.code}
                         className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
                       <td
                         className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
@@ -427,21 +460,21 @@ function App() {
                       </td>
                       <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            invite.status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              invite.status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                            status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                           }`}>
-                            {invite.status}
+                            {status}
                           </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {format(new Date(invite.created_at), 'MMM d, yyyy HH:mm')}
+                        {formatDate(invite.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {invite.used_at ? format(new Date(invite.used_at), 'MMM d, yyyy HH:mm') : '-'}
+                        {formatDate(usedAt)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {invite.status === 'Unused' && (
+                        {status === 'Unused' && (
                           <button
                             onClick={() => handleDisableInvite(invite.code)}
                             className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition"
@@ -452,7 +485,8 @@ function App() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>
