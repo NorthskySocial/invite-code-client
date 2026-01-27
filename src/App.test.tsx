@@ -27,6 +27,20 @@ const handlers = [
       ]
     });
   }),
+  http.get('https://frontend.myapp.local/api/admins', () => {
+    return HttpResponse.json({
+      admins: [
+        {username: 'admin', createdAt: new Date().toISOString()}
+      ]
+    });
+  }),
+  http.get('https://custom-api.example.com/api/admins', () => {
+    return HttpResponse.json({
+      admins: [
+        {username: 'admin', createdAt: new Date().toISOString()}
+      ]
+    });
+  }),
 ];
 
 const server = setupServer(...handlers);
@@ -260,5 +274,48 @@ describe('Demo Mode', () => {
     expect(screen.getAllByText('USED-456')[0]).toBeInTheDocument();
     expect(screen.getAllByText('DISABLED-789')[0]).toBeInTheDocument();
     expect(localStorage.getItem('demo_mode')).toBe('true');
+  });
+
+  it('allows managing admins in Demo Mode', async () => {
+    render(<App/>);
+
+    // Toggle Demo Mode and Login
+    fireEvent.click(screen.getByRole('switch', {name: /Demo Mode/i}));
+    fireEvent.click(screen.getByRole('button', {name: /Start Demo/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Admins')).toBeInTheDocument();
+    });
+
+    // Navigate to Admins page
+    fireEvent.click(screen.getByText('Admins'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Manage Admins')).toBeInTheDocument();
+      expect(screen.getByText('admin')).toBeInTheDocument();
+    });
+
+    // Check if initial mock admins are there
+    expect(screen.getByText('demo-user')).toBeInTheDocument();
+
+    // Add a new admin
+    const input = screen.getByPlaceholderText('Username to add');
+    fireEvent.change(input, {target: {value: 'new-admin'}});
+    fireEvent.click(screen.getByRole('button', {name: /Add Admin/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('new-admin')).toBeInTheDocument();
+      expect(screen.getByText(/Admin created successfully!/i)).toBeInTheDocument();
+      expect(screen.getByText(/mock-generated-password-/i)).toBeInTheDocument();
+    });
+
+    // Remove an admin (mock confirm to always return true)
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    const removeButtons = screen.getAllByTitle('Remove Admin');
+    fireEvent.click(removeButtons[0]); // Remove 'admin'
+
+    await waitFor(() => {
+      expect(screen.queryByText('admin')).not.toBeInTheDocument();
+    });
   });
 });

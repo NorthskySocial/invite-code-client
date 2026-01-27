@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {apiService, mockApiService, updateApiBaseURL, InviteCode} from './api';
+import {apiService, mockApiService, updateApiBaseURL, InviteCode, Admin} from './api';
 import {
   LogIn,
   Plus,
@@ -14,7 +14,10 @@ import {
   Sun,
   Moon,
   Globe,
-  Zap
+  Zap,
+  Users,
+  UserPlus,
+  UserMinus
 } from 'lucide-react';
 import {format, isValid} from 'date-fns';
 
@@ -29,7 +32,7 @@ const formatDate = (dateString: string | undefined) => {
   return format(date, 'MMM d, yyyy HH:mm');
 };
 
-type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate';
+type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate' | 'Admins';
 type FilterStatus = 'All' | 'Used' | 'Unused' | 'Disabled';
 
 function App() {
@@ -55,11 +58,17 @@ function App() {
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
-      setPage('Home');
+      if (page === 'Login') {
+        setPage('Home');
+      }
       fetchInvites();
+      fetchAdmins();
     }
   }, [token]);
 
@@ -92,6 +101,53 @@ function App() {
       if (err.response?.status === 401) {
         handleLogout();
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const response = await activeService.getAdmins();
+      setAdmins(response.data?.admins || []);
+    } catch (err: any) {
+      console.error('Failed to fetch admins', err);
+    }
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminUsername.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setNewAdminPassword(null);
+    try {
+      const response = await activeService.addAdmin(newAdminUsername.trim());
+      setNewAdminUsername('');
+      if (response.data.password) {
+        setNewAdminPassword(response.data.password);
+      }
+      fetchAdmins();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to add admin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (username: string) => {
+    if (!confirm(`Are you sure you want to remove ${username} as an admin?`)) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await activeService.removeAdmin(username);
+      fetchAdmins();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to remove admin');
     } finally {
       setLoading(false);
     }
@@ -409,10 +465,26 @@ function App() {
       <nav
         className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7"/>
-            <span
-              className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap">Invites Manager</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7"/>
+              <span
+                className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap hidden sm:inline">Invites Manager</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setPage('Home')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${page === 'Home' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                Invites
+              </button>
+              <button
+                onClick={() => setPage('Admins')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${page === 'Admins' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                Admins
+              </button>
+            </div>
           </div>
           <div className="flex gap-1 md:gap-2">
             <button
@@ -434,6 +506,129 @@ function App() {
       </nav>
 
       <main className="max-w-6xl mx-auto p-4 md:p-6">
+        {page === 'Admins' && (
+          <div className="space-y-6">
+            <div
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2
+                    className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-600"/>
+                    Manage Admins
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Add or remove
+                    administrators for the invite code system.</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleAddAdmin} className="flex gap-2 max-w-md mb-8">
+                <div className="relative flex-1">
+                  <UserPlus
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"/>
+                  <input
+                    type="text"
+                    placeholder="Username to add"
+                    className="w-full p-2.5 pl-9 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    value={newAdminUsername}
+                    onChange={(e) => setNewAdminUsername(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || !newAdminUsername.trim()}
+                  className="bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2 text-sm"
+                >
+                  Add Admin
+                </button>
+              </form>
+
+              {newAdminPassword && (
+                <div
+                  className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 p-4 rounded-lg mb-6 flex flex-col items-center gap-2">
+                  <div
+                    className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium">
+                    <Check className="w-5 h-5"/>
+                    Admin created successfully!
+                  </div>
+                  <div
+                    className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded border border-green-200 dark:border-green-800 w-full justify-between">
+                    <code
+                      className="text-lg font-mono text-gray-800 dark:text-white">{newAdminPassword}</code>
+                    <button
+                      onClick={() => copyToClipboard(newAdminPassword)}
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition"
+                      title="Copy Password"
+                    >
+                      {copied === newAdminPassword ? <Check className="w-4 h-4 text-green-500"/> :
+                        <Copy className="w-4 h-4 text-gray-500"/>}
+                    </button>
+                  </div>
+                  <p className="text-xs text-green-600 dark:text-green-400">Please save this
+                    password, it will not be shown again.</p>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg mb-6">
+                  <p className="text-red-500 text-sm text-center">{error}</p>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                  <tr className="border-b dark:border-gray-700">
+                    <th
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username
+                    </th>
+                    <th
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Added
+                      Date
+                    </th>
+                    <th
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Actions
+                    </th>
+                  </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-700">
+                  {admins.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No admins found.
+                      </td>
+                    </tr>
+                  ) : (
+                    admins.map((admin) => (
+                      <tr key={admin.username}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                        <td className="py-4 px-4">
+                        <span
+                          className="font-medium text-gray-800 dark:text-white">{admin.username}</span>
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          {formatDate(admin.createdAt)}
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            onClick={() => handleRemoveAdmin(admin.username)}
+                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                            title="Remove Admin"
+                          >
+                            <UserMinus className="w-5 h-5"/>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {page === 'Home' && (
           <div className="space-y-6">
             {/* Controls */}

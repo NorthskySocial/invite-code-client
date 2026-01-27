@@ -40,6 +40,15 @@ export interface InviteCode {
   }[];
 }
 
+export interface Admin {
+  username: string;
+  createdAt: string;
+}
+
+export interface AdminsResponse {
+  admins: Admin[];
+}
+
 export interface LoginResponse {
   token?: string;
   requires_2fa?: boolean;
@@ -53,6 +62,12 @@ export interface LoginResponse {
 
 export interface GenerateOtpResponse {
   qr_code: string;
+}
+
+export interface AddAdminResponse {
+  status: string;
+  message: string;
+  password?: string;
 }
 
 export const apiService = {
@@ -76,6 +91,15 @@ export const apiService = {
 
   verifyOtp: (token: string) =>
     api.post('/api/auth/otp/verify', {token}),
+
+  getAdmins: () =>
+    api.get<AdminsResponse>('/api/admins'),
+
+  addAdmin: (username: string) =>
+    api.post<AddAdminResponse>('/api/admins', {username}),
+
+  removeAdmin: (username: string) =>
+    api.delete(`/api/admins/${username}`),
 
   resolveDid: (did: string) =>
     axios.get(`https://plc.directory/${did}`),
@@ -145,6 +169,45 @@ export const mockApiService = {
 
   verifyOtp: async (_token: string) => {
     await new Promise(resolve => setTimeout(resolve, 300));
+    return {data: {success: true}};
+  },
+
+  getAdmins: async (): Promise<{ data: AdminsResponse }> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const admins: Admin[] = JSON.parse(localStorage.getItem('mock_admins') || JSON.stringify([
+      {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
+      {username: 'demo-user', createdAt: new Date().toISOString()}
+    ]));
+    return {data: {admins}};
+  },
+
+  addAdmin: async (username: string): Promise<{ data: AddAdminResponse }> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const admins = JSON.parse(localStorage.getItem('mock_admins') || JSON.stringify([
+      {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
+      {username: 'demo-user', createdAt: new Date().toISOString()}
+    ]));
+    if (!admins.find((a: any) => a.username === username)) {
+      admins.push({username, createdAt: new Date().toISOString()});
+      localStorage.setItem('mock_admins', JSON.stringify(admins));
+    }
+    return {
+      data: {
+        status: 'success',
+        message: 'Admin user created successfully',
+        password: 'mock-generated-password-' + Math.random().toString(36).substring(7)
+      }
+    };
+  },
+
+  removeAdmin: async (username: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const admins = JSON.parse(localStorage.getItem('mock_admins') || JSON.stringify([
+      {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
+      {username: 'demo-user', createdAt: new Date().toISOString()}
+    ]));
+    const filtered = admins.filter((a: any) => a.username !== username);
+    localStorage.setItem('mock_admins', JSON.stringify(filtered));
     return {data: {success: true}};
   },
 
