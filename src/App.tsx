@@ -70,7 +70,7 @@ function App() {
       fetchInvites();
       fetchAdmins();
     }
-  }, [token]);
+  }, [token, page === 'Admins']);
 
   useEffect(() => {
     if (darkMode) {
@@ -107,11 +107,16 @@ function App() {
   };
 
   const fetchAdmins = async () => {
+    setLoading(true);
     try {
       const response = await activeService.getAdmins();
       setAdmins(response.data?.admins || []);
+      setError(null);
     } catch (err: any) {
       console.error('Failed to fetch admins', err);
+      setError(err.response?.data?.error || 'Failed to fetch admins');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -520,6 +525,14 @@ function App() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Add or remove
                     administrators for the invite code system.</p>
                 </div>
+                <button
+                  onClick={fetchAdmins}
+                  disabled={loading}
+                  className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                  title="Refresh Admins"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}/>
+                </button>
               </div>
 
               <form onSubmit={handleAddAdmin} className="flex gap-2 max-w-md mb-8">
