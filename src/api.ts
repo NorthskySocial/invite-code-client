@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  return localStorage.getItem('api_host') || 'https://frontend.myapp.local/';
+  return localStorage.getItem('api_host') || import.meta.env.VITE_API_HOST || 'https://frontend.myapp.local/';
 };
 
 export const api = axios.create({

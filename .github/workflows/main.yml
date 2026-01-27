@@ -18,6 +18,8 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_API_HOST: https://invites.northsky.social
 
   test:
     name: Test Suite
@@ -72,6 +74,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_HOST=https://invites.northsky.social
       - name: "Generate artifact attestation"
         uses: actions/attest-build-provenance@v2
         with:
@@ -102,3 +106,4 @@ jobs:
         run: npm run electron:build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_API_HOST: https://invites.northsky.social

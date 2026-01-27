@@ -12,6 +12,10 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
+# Set the environment variable for the API host
+ARG VITE_API_HOST
+ENV VITE_API_HOST=$VITE_API_HOST
+
 # Build the application
 RUN npm run build
 

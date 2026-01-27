@@ -49,7 +49,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [apiHost, setApiHost] = useState(localStorage.getItem('api_host') || 'https://frontend.myapp.local/');
+  const [apiHost, setApiHost] = useState(localStorage.getItem('api_host') || import.meta.env.VITE_API_HOST || 'https://frontend.myapp.local/');
   const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
   const activeService = isDemoMode ? mockApiService : apiService;
   const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
