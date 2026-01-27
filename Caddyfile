@@ -1,0 +1,11 @@
+frontend.myapp.local {
+    handle_path /api* {
+        reverse_proxy localhost:9090
+    }
+
+    handle {
+        reverse_proxy localhost:5173
+    }
+
+    tls internal
+}

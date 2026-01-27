@@ -1,25 +1,31 @@
-FROM rust:latest AS builder
+# Stage 1: Build the React application
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock rust-toolchain.toml Trunk.toml index.html ./
+# Copy package.json and package-lock.json to install dependencies
+COPY package*.json ./
 
-RUN rustup target add wasm32-unknown-unknown
+# Install dependencies
+RUN npm install
 
-RUN cargo install trunk --locked
+# Copy the rest of the application code
+COPY . .
 
-COPY assets ./assets
+# Build the application
+RUN npm run build
 
-COPY src ./src
+# Stage 2: Serve the application using Nginx
+FROM nginx:stable-alpine
 
-RUN trunk build --release
+# Copy the built assets from the build stage
+COPY --from=build /app/dist /usr/share/nginx/html
 
-FROM nginx:mainline-alpine AS server
+# Copy the custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY assets /usr/share/nginx/html/assets
+# Expose port 80
+EXPOSE 80
 
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-LABEL org.opencontainers.image.source=https://github.com/NorthskySocial/invite-code-client
-LABEL org.opencontainers.image.description="Invite Code Client"
-LABEL org.opencontainers.image.licenses=MIT
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
