@@ -1,11 +1,17 @@
 import axios from 'axios';
 
-const api = axios.create({
-  // baseURL: 'https://invites.northsky.social',
-  baseURL: 'https://frontend.myapp.local/',
-  // baseURL: 'http://localhost:9090',
+const getBaseURL = () => {
+  return localStorage.getItem('api_host') || 'https://frontend.myapp.local/';
+};
+
+export const api = axios.create({
+  baseURL: getBaseURL(),
   withCredentials: true,
 });
+
+export const updateApiBaseURL = (newBaseURL: string) => {
+  api.defaults.baseURL = newBaseURL;
+};
 
 // Interceptor to add token to requests
 api.interceptors.request.use((config) => {
@@ -73,4 +79,76 @@ export const apiService = {
 
   resolveDid: (did: string) =>
     axios.get(`https://plc.directory/${did}`),
+};
+
+export const mockApiService = {
+  login: async (_username: string, _password: string): Promise<{ data: LoginResponse }> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {data: {token: 'mock-token', username: 'demo-user'}};
+  },
+
+  getInviteCodes: async (): Promise<{ data: InviteCodes }> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const codes: InviteCode[] = [
+      {
+        code: 'DEMO-123',
+        available: 1,
+        disabled: false,
+        forAccount: 'demo-user',
+        createdBy: 'demo-user',
+        createdAt: new Date().toISOString(),
+        uses: []
+      },
+      {
+        code: 'USED-456',
+        available: 0,
+        disabled: false,
+        forAccount: 'demo-user',
+        createdBy: 'admin',
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        uses: [{usedBy: 'did:plc:mockuser', usedAt: new Date().toISOString()}]
+      },
+      {
+        code: 'DISABLED-789',
+        available: 1,
+        disabled: true,
+        forAccount: 'demo-user',
+        createdBy: 'admin',
+        createdAt: new Date(Date.now() - 172800000).toISOString(),
+        uses: []
+      }
+    ];
+    return {data: {codes}};
+  },
+
+  createInviteCodes: async (count: number) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log(`Mock: Created ${count} invite codes`);
+    return {data: {success: true}};
+  },
+
+  disableInviteCode: async (code: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log(`Mock: Disabled code ${code}`);
+    return {data: {success: true}};
+  },
+
+  generateOtp: async (): Promise<{ data: GenerateOtpResponse }> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {data: {qr_code: 'mock-qr-code'}};
+  },
+
+  validateOtp: async (_token: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {data: {token: 'mock-token'}};
+  },
+
+  verifyOtp: async (_token: string) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return {data: {success: true}};
+  },
+
+  resolveDid: async (did: string) => {
+    return {data: {handle: did.replace('did:plc:', '') + '.test'}};
+  },
 };

@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {apiService, InviteCode} from './api';
+import {apiService, mockApiService, updateApiBaseURL, InviteCode} from './api';
 import {
   LogIn,
   Plus,
@@ -12,7 +12,9 @@ import {
   Check,
   Filter,
   Sun,
-  Moon
+  Moon,
+  Globe,
+  Zap
 } from 'lucide-react';
 import {format, isValid} from 'date-fns';
 
@@ -44,6 +46,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [apiHost, setApiHost] = useState(localStorage.getItem('api_host') || 'https://frontend.myapp.local/');
+  const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
+  const activeService = isDemoMode ? mockApiService : apiService;
   const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [otpToken, setOtpToken] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -75,7 +80,7 @@ function App() {
   const fetchInvites = async () => {
     setLoading(true);
     try {
-      const response = await apiService.getInviteCodes();
+      const response = await activeService.getInviteCodes();
       const data = response.data?.codes || [];
       setInvites(Array.isArray(data) ? data : []);
       setError(null);
@@ -127,7 +132,7 @@ function App() {
 
     for (const did of didsToResolve) {
       try {
-        const response = await apiService.resolveDid(did);
+        const response = await activeService.resolveDid(did);
         // PLC directory response has 'alsoKnownAs' array with 'at://handle'
         const alsoKnownAs = response.data?.alsoKnownAs || [];
         const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
@@ -161,8 +166,21 @@ function App() {
     setTwoFactorToken(null);
     setOtpToken('');
     setQrCode(null);
+
+    // Normalize and update API host
+    let normalizedHost = apiHost.trim();
+    if (normalizedHost && !normalizedHost.endsWith('/')) {
+      normalizedHost += '/';
+    }
+    if (normalizedHost) {
+      localStorage.setItem('api_host', normalizedHost);
+      updateApiBaseURL(normalizedHost);
+    }
+
+    localStorage.setItem('demo_mode', isDemoMode.toString());
+
     try {
-      const response = await apiService.login(username, password);
+      const response = await activeService.login(username, password);
       if (response.data.requires_2fa || (response.data.otp_enabled && response.data.otp_verified && !response.data.token)) {
         setTwoFactorToken(response.data.two_factor_token || null);
         setPage('QrValidate');
@@ -206,7 +224,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      await apiService.createInviteCodes(inviteCount);
+      await activeService.createInviteCodes(inviteCount);
       fetchInvites();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create invites');
@@ -218,7 +236,7 @@ function App() {
   const handleDisableInvite = async (code: string) => {
     setError(null);
     try {
-      await apiService.disableInviteCode(code);
+      await activeService.disableInviteCode(code);
       fetchInvites();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to disable invite');
@@ -230,7 +248,7 @@ function App() {
   //   setLoading(true);
   //   setError(null);
   //   try {
-  //     const response = await apiService.generateOtp();
+  //     const response = await activeService.generateOtp();
   //     setQrCode(response.data.qr_code);
   //   } catch (err: any) {
   //     setError(err.response?.data?.error || 'Failed to generate QR');
@@ -243,7 +261,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      await apiService.verifyOtp(otpToken);
+      await activeService.verifyOtp(otpToken);
       alert('OTP Verified successfully');
       setPage('Home');
     } catch (err: any) {
@@ -257,7 +275,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.validateOtp(otpToken);
+      const response = await activeService.validateOtp(otpToken);
       const token = (response.data as any).token;
       if (token) {
         localStorage.setItem('token', token);
@@ -314,6 +332,38 @@ function App() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            <div
+              className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg mb-2">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Demo Mode</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">Run locally without a
+                  backend</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDemoMode(!isDemoMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-transparent focus:ring-blue-500 ${isDemoMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                role="switch"
+                aria-checked={isDemoMode}
+                aria-label="Demo Mode"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDemoMode ? 'translate-x-6' : 'translate-x-1'}`}
+                />
+              </button>
+            </div>
+            {!isDemoMode && (
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"/>
+                <input
+                  type="text"
+                  placeholder="Backend API Host (e.g. https://api.example.com)"
+                  className="w-full p-3.5 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  value={apiHost}
+                  onChange={(e) => setApiHost(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <input
                 type="text"
@@ -342,9 +392,10 @@ function App() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98]"
+              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {isDemoMode && <Zap className="w-5 h-5"/>}
+              {loading ? 'Logging in...' : (isDemoMode ? 'Start Demo' : 'Login')}
             </button>
           </form>
         </div>

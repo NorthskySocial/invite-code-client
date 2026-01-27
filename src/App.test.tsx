@@ -57,6 +57,7 @@ describe('App Component', () => {
   it('renders login page by default', () => {
     render(<App/>);
     expect(screen.getByText(/Invites Client/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Backend API Host/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Username/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', {name: /Login/i})).toBeInTheDocument();
@@ -191,5 +192,73 @@ describe('App Component', () => {
 
     // Check if the status is 'Used' (might be multiple 'Used' badges, so we check at least one exists)
     expect(screen.getAllByText('Used')[0]).toBeInTheDocument();
+  });
+
+  it('successfully logs in with a custom API host', async () => {
+    const customHost = 'https://custom-api.example.com/';
+    server.use(
+      http.post(`${customHost}api/auth/login`, async () => {
+        return HttpResponse.json({token: 'custom-token', username: 'admin'});
+      }),
+      http.get(`${customHost}api/invite-codes`, () => {
+        return HttpResponse.json({
+          codes: [
+            {
+              code: 'CUSTOM-123',
+              available: 1,
+              disabled: false,
+              forAccount: 'admin',
+              createdBy: 'admin',
+              createdAt: new Date().toISOString(),
+              uses: []
+            }
+          ]
+        });
+      }),
+    );
+
+    render(<App/>);
+
+    fireEvent.change(screen.getByPlaceholderText(/Backend API Host/i), {target: {value: customHost}});
+    fireEvent.change(screen.getByPlaceholderText(/Username/i), {target: {value: 'admin'}});
+    fireEvent.change(screen.getByPlaceholderText(/Password/i), {target: {value: 'password'}});
+    fireEvent.click(screen.getByRole('button', {name: /Login/i}));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('CUSTOM-123')[0]).toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem('api_host')).toBe(customHost);
+  });
+});
+
+describe('Demo Mode', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('successfully logs in and shows mock data when Demo Mode is enabled', async () => {
+    render(<App/>);
+
+    // Toggle Demo Mode
+    const demoToggle = screen.getByRole('switch', {name: /Demo Mode/i});
+    fireEvent.click(demoToggle);
+
+    // Backend host input should disappear
+    expect(screen.queryByPlaceholderText(/Backend API Host/i)).not.toBeInTheDocument();
+
+    // Login with Demo Mode
+    fireEvent.change(screen.getByPlaceholderText(/Username/i), {target: {value: 'demo'}});
+    fireEvent.change(screen.getByPlaceholderText(/Password/i), {target: {value: 'demo'}});
+    fireEvent.click(screen.getByRole('button', {name: /Start Demo/i}));
+
+    await waitFor(() => {
+      // Check for mock data defined in mockApiService
+      expect(screen.getAllByText('DEMO-123')[0]).toBeInTheDocument();
+    }, {timeout: 3000});
+
+    expect(screen.getAllByText('USED-456')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('DISABLED-789')[0]).toBeInTheDocument();
+    expect(localStorage.getItem('demo_mode')).toBe('true');
   });
 });
