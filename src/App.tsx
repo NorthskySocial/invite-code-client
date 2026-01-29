@@ -251,8 +251,8 @@ function App() {
         localStorage.setItem('token', response.data.token);
         setToken(response.data.token);
 
-        // If OTP is enabled but not verified, redirect to setup
-        if (response.data.otp_enabled && !response.data.otp_verified) {
+        // If OTP is enabled but not verified, OR if OTP is disabled and not verified (new setup)
+        if ((response.data.otp_enabled && !response.data.otp_verified) || (!response.data.otp_enabled && !response.data.otp_verified)) {
           if (response.data.otp_auth_url) {
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
             setQrCode(qrCodeUrl);

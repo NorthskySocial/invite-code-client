@@ -78,7 +78,7 @@ export const apiService = {
     api.get<InviteCodes>('/api/invite-codes'),
 
   createInviteCodes: (count: number) =>
-    api.post('/api/create-invite-codes', {codeCount: count}),
+    api.post('/api/create-invite-codes', {codeCount: count, useCount: 1}),
 
   disableInviteCode: (code: string) =>
     api.post('/api/disable-invite-codes', {code}),
@@ -106,8 +106,19 @@ export const apiService = {
 };
 
 export const mockApiService = {
-  login: async (_username: string, _password: string): Promise<{ data: LoginResponse }> => {
+  login: async (username: string, password: string): Promise<{ data: LoginResponse }> => {
     await new Promise(resolve => setTimeout(resolve, 500));
+    if (username === 'new-user') {
+      return {
+        data: {
+          token: 'mock-token-new',
+          username: 'new-user',
+          otp_enabled: false,
+          otp_verified: false,
+          otp_auth_url: 'otpauth://totp/InviteCode:new-user?secret=MOCKSECRET&issuer=InviteCode'
+        }
+      };
+    }
     return {data: {token: 'mock-token', username: 'demo-user'}};
   },
 
