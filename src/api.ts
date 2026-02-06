@@ -106,7 +106,7 @@ export const apiService = {
 };
 
 export const mockApiService = {
-  login: async (username: string, password: string): Promise<{ data: LoginResponse }> => {
+  login: async (username: string, _password: string): Promise<{ data: LoginResponse }> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     if (username === 'new-user') {
       return {
