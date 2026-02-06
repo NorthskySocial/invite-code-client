@@ -36,7 +36,10 @@ type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate' | 'Admins';
 type FilterStatus = 'All' | 'Used' | 'Unused' | 'Disabled';
 
 function App() {
-  const [page, setPage] = useState<Page>('Login');
+  const [page, setPage] = useState<Page>(() => {
+    const token = localStorage.getItem('token');
+    return token ? 'Home' : 'Login';
+  });
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
@@ -64,9 +67,6 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      if (page === 'Login') {
-        setPage('Home');
-      }
       fetchInvites();
       fetchAdmins();
     }
@@ -242,27 +242,23 @@ function App() {
 
     try {
       const response = await activeService.login(username, password);
-      if (response.data.requires_2fa || (response.data.otp_enabled && response.data.otp_verified && !response.data.token)) {
+      if (response.data.otp_enabled && response.data.otp_verified && !response.data.token) {
         setTwoFactorToken(response.data.two_factor_token || null);
         setPage('QrValidate');
         return;
       }
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        setToken(response.data.token);
 
-        // If OTP is enabled but not verified, OR if OTP is disabled and not verified (new setup)
-        if ((response.data.otp_enabled && !response.data.otp_verified) || (!response.data.otp_enabled && !response.data.otp_verified)) {
-          if (response.data.otp_auth_url) {
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
-            setQrCode(qrCodeUrl);
-            setPage('QrVerify');
-          } else {
-            setPage('Home');
-          }
+      // If OTP is enabled but not verified, OR if OTP is disabled and not verified (new setup)
+      if ((response.data.otp_enabled && !response.data.otp_verified) || (!response.data.otp_enabled && !response.data.otp_verified)) {
+        if (response.data.otp_auth_url) {
+          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
+          setQrCode(qrCodeUrl);
+          setPage('QrVerify');
         } else {
           setPage('Home');
         }
+      } else {
+        setPage('Home');
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
@@ -360,14 +356,30 @@ function App() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const downloadTxt = () => {
-    const content = filteredInvites.map(i => i.code).join('\n');
-    const blob = new Blob([content], {type: 'text/plain'});
+  const downloadCsv = () => {
+    const headers = ['Invite Code', 'Status', 'Created At', 'Used By', 'Used At'];
+    const rows = filteredInvites.map(invite => {
+      const usedBy = getUsedBy(invite);
+      const resolvedHandle = usedBy ? handles[usedBy] : null;
+      const usedByText = resolvedHandle || usedBy || '-';
+
+      return [
+        invite.code,
+        getStatus(invite),
+        formatDate(invite.createdAt),
+        usedByText,
+        formatDate(getUsedAt(invite))
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `invites_${format(new Date(), 'yyyyMMdd_HHmmss')}.txt`;
+    a.download = `invites_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (page === 'Login') {
@@ -683,10 +695,10 @@ function App() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={downloadTxt}
+                    onClick={downloadCsv}
                     className="flex-1 sm:flex-none p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 flex items-center justify-center gap-2"
                   >
-                    <Download className="w-4 h-4"/> Export
+                    <Download className="w-4 h-4"/> Export CSV
                   </button>
 
                   <button
@@ -742,19 +754,19 @@ function App() {
                     const resolvedHandle = usedBy ? handles[usedBy] : null;
                     return (
                       <tr key={invite.code}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                      <td
-                        className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
-                        {invite.code}
-                        <button
-                          onClick={() => copyToClipboard(invite.code)}
-                          className="text-gray-400 hover:text-blue-600 p-1"
-                        >
-                          {copied === invite.code ? <Check className="w-4 h-4 text-green-500"/> :
-                            <Copy className="w-4 h-4"/>}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
+                          className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <td
+                          className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
+                          {invite.code}
+                          <button
+                            onClick={() => copyToClipboard(invite.code)}
+                            className="text-gray-400 hover:text-blue-600 p-1"
+                          >
+                            {copied === invite.code ? <Check className="w-4 h-4 text-green-500"/> :
+                              <Copy className="w-4 h-4"/>}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                               status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
@@ -762,10 +774,10 @@ function App() {
                           }`}>
                             {status}
                           </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(invite.createdAt)}
-                      </td>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(invite.createdAt)}
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                           {resolvedHandle ? (
                             <a
@@ -781,22 +793,22 @@ function App() {
                             {usedBy.substring(0, 15)}...
                           </span>
                           ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(usedAt)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {status === 'Unused' && (
-                          <button
-                            onClick={() => handleDisableInvite(invite.code)}
-                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
-                            title="Disable"
-                          >
-                            <Trash2 className="w-4 h-4"/>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(usedAt)}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {status === 'Unused' && (
+                            <button
+                              onClick={() => handleDisableInvite(invite.code)}
+                              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
+                              title="Disable"
+                            >
+                              <Trash2 className="w-4 h-4"/>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     );
                   })}
                   </tbody>
