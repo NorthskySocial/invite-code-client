@@ -34,6 +34,19 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
   docker:
     name: Build and publish Docker image
     if: github.ref == 'refs/heads/main'
@@ -41,6 +54,7 @@ jobs:
     needs:
       - check
       - test
+      - lint
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
@@ -90,6 +104,7 @@ jobs:
     needs:
       - check
       - test
+      - lint
     strategy:
       fail-fast: false
       matrix:

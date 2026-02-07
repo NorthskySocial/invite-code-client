@@ -301,18 +301,20 @@ function App() {
   };
 
   // Not used currently
-  // const handleGenerateOtp = async () => {
-  //   setLoading(true);
-  //   setError(null);
-  //   try {
-  //     const response = await activeService.generateOtp();
-  //     setQrCode(response.data.qr_code);
-  //   } catch (err: any) {
-  //     setError(err.response?.data?.error || 'Failed to generate QR');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  /*
+  const handleGenerateOtp = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await activeService.generateOtp();
+      setQrCode(response.data.qr_code);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate QR');
+    } finally {
+      setLoading(false);
+    }
+  };
+  */
 
   const handleVerifyOtp = async () => {
     setLoading(true);
