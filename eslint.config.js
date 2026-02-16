@@ -1,19 +1,20 @@
-import js from "@eslint/js";
-import ts from "typescript-eslint";
-import react from "eslint-plugin-react";
-import reactHooks from "eslint-plugin-react-hooks";
-import jsxA11y from "eslint-plugin-jsx-a11y";
-import importPlugin from "eslint-plugin-import";
-import globals from "globals";
+import js from '@eslint/js';
+import ts from 'typescript-eslint';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import importPlugin from 'eslint-plugin-import';
+import globals from 'globals';
+import prettierConfig from 'eslint-config-prettier';
 
 export default ts.config(
     js.configs.recommended,
     ...ts.configs.recommended,
     {
-        files: ["**/*.{ts,tsx}"],
+        files: ['**/*.{ts,tsx}'],
         languageOptions: {
-            ecmaVersion: "latest",
-            sourceType: "module",
+            ecmaVersion: 'latest',
+            sourceType: 'module',
             globals: {
                 ...globals.browser,
                 ...globals.es2021,
@@ -26,15 +27,15 @@ export default ts.config(
         },
         plugins: {
             react,
-            "react-hooks": reactHooks,
-            "jsx-a11y": jsxA11y,
+            'react-hooks': reactHooks,
+            'jsx-a11y': jsxA11y,
             import: importPlugin,
         },
         settings: {
             react: {
-                version: "detect",
+                version: 'detect',
             },
-            "import/resolver": {
+            'import/resolver': {
                 typescript: true,
                 node: true,
             },
@@ -43,27 +44,31 @@ export default ts.config(
             ...react.configs.recommended.rules,
             ...reactHooks.configs.recommended.rules,
             ...jsxA11y.configs.recommended.rules,
-            "react/react-in-jsx-scope": "off",
-            "@typescript-eslint/no-explicit-any": "warn",
-            "@typescript-eslint/no-unused-vars": ["error", {
-                "argsIgnorePattern": "^_",
-                "varsIgnorePattern": "^_"
-            }],
-            "jsx-a11y/no-autofocus": "off",
+            'react/react-in-jsx-scope': 'off',
+            '@typescript-eslint/no-explicit-any': 'warn',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    argsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                },
+            ],
+            'jsx-a11y/no-autofocus': 'off',
         },
     },
     {
-        files: ["electron/**/*.js", "electron/**/*.cjs"],
+        files: ['electron/**/*.js', 'electron/**/*.cjs'],
         languageOptions: {
             globals: {
                 ...globals.node,
             },
         },
         rules: {
-            "@typescript-eslint/no-require-imports": "off",
+            '@typescript-eslint/no-require-imports': 'off',
         },
     },
     {
-        ignores: ["dist", "release", "node_modules", ".github", "*.config.js", "*.config.ts", "assets"],
-    }
+        ignores: ['dist', 'release', 'node_modules', '.github', '*.config.js', '*.config.ts', 'assets'],
+    },
+    prettierConfig
 );

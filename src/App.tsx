@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {apiService, mockApiService, updateApiBaseURL, InviteCode, Admin} from './api';
 import {
   LogIn,
@@ -17,7 +17,7 @@ import {
   Zap,
   Users,
   UserPlus,
-  UserMinus
+  UserMinus,
 } from 'lucide-react';
 import {format, isValid} from 'date-fns';
 
@@ -43,7 +43,9 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
-    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    return (
+      saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    );
   });
   const [invites, setInvites] = useState<InviteCode[]>([]);
   const [filteredInvites, setFilteredInvites] = useState<InviteCode[]>([]);
@@ -52,7 +54,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [apiHost, setApiHost] = useState(localStorage.getItem('api_host') || import.meta.env.VITE_API_HOST || 'https://frontend.myapp.local/');
+  const [apiHost, setApiHost] = useState(
+    localStorage.getItem('api_host') ||
+    import.meta.env.VITE_API_HOST ||
+    'https://frontend.myapp.local/'
+  );
   const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
   const activeService = isDemoMode ? mockApiService : apiService;
   const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
@@ -65,28 +71,7 @@ function App() {
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (token) {
-      fetchInvites();
-      fetchAdmins();
-    }
-  }, [token, page === 'Admins']);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
-
-  useEffect(() => {
-    applyFilter();
-  }, [invites, filter]);
-
-  const fetchInvites = async () => {
+  const fetchInvites = useCallback(async () => {
     setLoading(true);
     try {
       const response = await activeService.getInviteCodes();
@@ -96,7 +81,7 @@ function App() {
       if (Array.isArray(data)) {
         resolveHandles(data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to fetch invites');
       if (err.response?.status === 401) {
         handleLogout();
@@ -104,21 +89,21 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeService, resolveHandles]);
 
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     setLoading(true);
     try {
       const response = await activeService.getAdmins();
       setAdmins(response.data?.admins || []);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch admins', err);
       setError(err.response?.data?.error || 'Failed to fetch admins');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeService, setAdmins, setError]);
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +120,7 @@ function App() {
         setNewAdminPassword(response.data.password);
       }
       fetchAdmins();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to add admin');
     } finally {
       setLoading(false);
@@ -151,7 +136,7 @@ function App() {
     try {
       await activeService.removeAdmin(username);
       fetchAdmins();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to remove admin');
     } finally {
       setLoading(false);
@@ -182,43 +167,46 @@ function App() {
     return undefined;
   };
 
-  const resolveHandles = async (invitesList: InviteCode[]) => {
-    const didsToResolve = new Set<string>();
-    invitesList.forEach(invite => {
-      const usedBy = getUsedBy(invite);
-      if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
-        didsToResolve.add(usedBy);
-      }
-    });
-
-    for (const did of didsToResolve) {
-      try {
-        const response = await activeService.resolveDid(did);
-        // PLC directory response has 'alsoKnownAs' array with 'at://handle'
-        const alsoKnownAs = response.data?.alsoKnownAs || [];
-        const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
-        if (handleUri) {
-          const handle = handleUri.replace('at://', '');
-          setHandles(prev => ({...prev, [did]: handle}));
-        } else {
-          // If no handle found, we might want to store the DID itself or a placeholder
-          setHandles(prev => ({...prev, [did]: did}));
+  const resolveHandles = useCallback(
+    async (invitesList: InviteCode[]) => {
+      const didsToResolve = new Set<string>();
+      invitesList.forEach((invite) => {
+        const usedBy = getUsedBy(invite);
+        if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
+          didsToResolve.add(usedBy);
         }
-      } catch (err) {
-        console.error(`Failed to resolve DID: ${did}`, err);
-        // Optionally store the DID so we don't keep trying
-        setHandles(prev => ({...prev, [did]: did}));
-      }
-    }
-  };
+      });
 
-  const applyFilter = () => {
+      for (const did of didsToResolve) {
+        try {
+          const response = await activeService.resolveDid(did);
+          // PLC directory response has 'alsoKnownAs' array with 'at://handle'
+          const alsoKnownAs = response.data?.alsoKnownAs || [];
+          const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
+          if (handleUri) {
+            const handle = handleUri.replace('at://', '');
+            setHandles((prev) => ({...prev, [did]: handle}));
+          } else {
+            // If no handle found, we might want to store the DID itself or a placeholder
+            setHandles((prev) => ({...prev, [did]: did}));
+          }
+        } catch (err) {
+          console.error(`Failed to resolve DID: ${did}`, err);
+          // Optionally store the DID so we don't keep trying
+          setHandles((prev) => ({...prev, [did]: did}));
+        }
+      }
+    },
+    [activeService, handles]
+  );
+
+  const applyFilter = useCallback(() => {
     if (filter === 'All') {
       setFilteredInvites(invites);
     } else {
-      setFilteredInvites(invites.filter(i => getStatus(i) === filter));
+      setFilteredInvites(invites.filter((i) => getStatus(i) === filter));
     }
-  };
+  }, [invites, filter]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,7 +237,10 @@ function App() {
       }
 
       // If OTP is enabled but not verified, OR if OTP is disabled and not verified (new setup)
-      if ((response.data.otp_enabled && !response.data.otp_verified) || (!response.data.otp_enabled && !response.data.otp_verified)) {
+      if (
+        (response.data.otp_enabled && !response.data.otp_verified) ||
+        (!response.data.otp_enabled && !response.data.otp_verified)
+      ) {
         if (response.data.otp_auth_url) {
           const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
           setQrCode(qrCodeUrl);
@@ -260,7 +251,7 @@ function App() {
       } else {
         setPage('Home');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
@@ -283,7 +274,7 @@ function App() {
     try {
       await activeService.createInviteCodes(inviteCount);
       fetchInvites();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to create invites');
     } finally {
       setLoading(false);
@@ -295,7 +286,7 @@ function App() {
     try {
       await activeService.disableInviteCode(code);
       fetchInvites();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to disable invite');
     }
   };
@@ -308,7 +299,7 @@ function App() {
     try {
       const response = await activeService.generateOtp();
       setQrCode(response.data.qr_code);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'Failed to generate QR');
     } finally {
       setLoading(false);
@@ -323,7 +314,7 @@ function App() {
       await activeService.verifyOtp(otpToken);
       alert('OTP Verified successfully');
       setPage('Home');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'OTP Verification failed');
     } finally {
       setLoading(false);
@@ -335,7 +326,7 @@ function App() {
     setError(null);
     try {
       const response = await activeService.validateOtp(otpToken);
-      const token = (response.data as any).token;
+      const token = (response.data as unknown).token;
       if (token) {
         localStorage.setItem('token', token);
         setToken(token);
@@ -345,7 +336,7 @@ function App() {
         alert('OTP Validated successfully');
         setPage('Home');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.response?.data?.error || 'OTP Validation failed');
     } finally {
       setLoading(false);
@@ -360,7 +351,7 @@ function App() {
 
   const downloadCsv = () => {
     const headers = ['Invite Code', 'Status', 'Created At', 'Used By', 'Used At'];
-    const rows = filteredInvites.map(invite => {
+    const rows = filteredInvites.map((invite) => {
       const usedBy = getUsedBy(invite);
       const resolvedHandle = usedBy ? handles[usedBy] : null;
       const usedByText = resolvedHandle || usedBy || '-';
@@ -370,8 +361,10 @@ function App() {
         getStatus(invite),
         formatDate(invite.createdAt),
         usedByText,
-        formatDate(getUsedAt(invite))
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+        formatDate(getUsedAt(invite)),
+      ]
+        .map((val) => `"${String(val).replace(/"/g, '""')}"`)
+        .join(',');
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -383,6 +376,28 @@ function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const isAdminPage = page === 'Admins';
+  useEffect(() => {
+    if (token) {
+      fetchInvites();
+      fetchAdmins();
+    }
+  }, [token, isAdminPage, fetchInvites, fetchAdmins]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    applyFilter();
+  }, [invites, filter, applyFilter]);
 
   if (page === 'Login') {
     return (
@@ -402,8 +417,9 @@ function App() {
               <LogIn className="text-white w-8 h-8"/>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Invites Client</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-center mt-2">Enter your credentials
-              to access the manager</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center mt-2">
+              Enter your credentials to access the manager
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -411,8 +427,9 @@ function App() {
               className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg mb-2">
               <div className="flex-1">
                 <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Demo Mode</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">Run locally without a
-                  backend</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  Run locally without a backend
+                </p>
               </div>
               <button
                 type="button"
@@ -470,7 +487,7 @@ function App() {
               className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {isDemoMode && <Zap className="w-5 h-5"/>}
-              {loading ? 'Logging in...' : (isDemoMode ? 'Start Demo' : 'Login')}
+              {loading ? 'Logging in...' : isDemoMode ? 'Start Demo' : 'Login'}
             </button>
           </form>
         </div>
@@ -488,7 +505,9 @@ function App() {
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7"/>
               <span
-                className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap hidden sm:inline">Invites Manager</span>
+                className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap hidden sm:inline">
+                Invites Manager
+              </span>
             </div>
             <div className="flex items-center space-x-1">
               <button
@@ -536,8 +555,9 @@ function App() {
                     <Users className="w-5 h-5 text-blue-600"/>
                     Manage Admins
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Add or remove
-                    administrators for the invite code system.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Add or remove administrators for the invite code system.
+                  </p>
                 </div>
                 <button
                   onClick={fetchAdmins}
@@ -580,19 +600,24 @@ function App() {
                   </div>
                   <div
                     className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded border border-green-200 dark:border-green-800 w-full justify-between">
-                    <code
-                      className="text-lg font-mono text-gray-800 dark:text-white">{newAdminPassword}</code>
+                    <code className="text-lg font-mono text-gray-800 dark:text-white">
+                      {newAdminPassword}
+                    </code>
                     <button
                       onClick={() => copyToClipboard(newAdminPassword)}
                       className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition"
                       title="Copy Password"
                     >
-                      {copied === newAdminPassword ? <Check className="w-4 h-4 text-green-500"/> :
-                        <Copy className="w-4 h-4 text-gray-500"/>}
+                      {copied === newAdminPassword ? (
+                        <Check className="w-4 h-4 text-green-500"/>
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-500"/>
+                      )}
                     </button>
                   </div>
-                  <p className="text-xs text-green-600 dark:text-green-400">Please save this
-                    password, it will not be shown again.</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Please save this password, it will not be shown again.
+                  </p>
                 </div>
               )}
 
@@ -608,31 +633,39 @@ function App() {
                   <thead>
                   <tr className="border-b dark:border-gray-700">
                     <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Username
                     </th>
                     <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Added
-                      Date
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Added Date
                     </th>
                     <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Actions
+                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+                      Actions
                     </th>
                   </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700">
                   {admins.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td
+                        colSpan={3}
+                        className="py-8 text-center text-gray-500 dark:text-gray-400"
+                      >
                         No admins found.
                       </td>
                     </tr>
                   ) : (
                     admins.map((admin) => (
-                      <tr key={admin.username}
-                          className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                      <tr
+                        key={admin.username}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+                      >
                         <td className="py-4 px-4">
-                        <span
-                          className="font-medium text-gray-800 dark:text-white">{admin.username}</span>
+                            <span className="font-medium text-gray-800 dark:text-white">
+                              {admin.username}
+                            </span>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {formatDate(admin.createdAt)}
@@ -714,8 +747,12 @@ function App() {
               </div>
             </div>
 
-            {error &&
-                <p className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">{error}</p>}
+            {error && (
+              <p
+                className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">
+                {error}
+              </p>
+            )}
 
             {/* Desktop Table - Hidden on Mobile */}
             <div
@@ -725,26 +762,32 @@ function App() {
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
                   <tr>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Invite
-                      Code
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Invite Code
                     </th>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Status
                     </th>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Created
-                      At
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Created At
                     </th>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Used
-                      By
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Used By
                     </th>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Used
-                      At
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      DID
                     </th>
                     <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right">Actions
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Used At
+                    </th>
+                    <th
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right">
+                      Actions
                     </th>
                   </tr>
                   </thead>
@@ -755,8 +798,10 @@ function App() {
                     const usedBy = getUsedBy(invite);
                     const resolvedHandle = usedBy ? handles[usedBy] : null;
                     return (
-                      <tr key={invite.code}
-                          className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                      <tr
+                        key={invite.code}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                      >
                         <td
                           className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
                           {invite.code}
@@ -764,18 +809,25 @@ function App() {
                             onClick={() => copyToClipboard(invite.code)}
                             className="text-gray-400 hover:text-blue-600 p-1"
                           >
-                            {copied === invite.code ? <Check className="w-4 h-4 text-green-500"/> :
-                              <Copy className="w-4 h-4"/>}
+                            {copied === invite.code ? (
+                              <Check className="w-4 h-4 text-green-500"/>
+                            ) : (
+                              <Copy className="w-4 h-4"/>
+                            )}
                           </button>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                          }`}>
-                            {status}
-                          </span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                status === 'Unused'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : status === 'Used'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                              }`}
+                            >
+                              {status}
+                            </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(invite.createdAt)}
@@ -790,11 +842,18 @@ function App() {
                             >
                               {resolvedHandle}
                             </a>
-                          ) : usedBy ? (
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {usedBy ? (
                             <span className="font-mono text-xs" title={usedBy}>
-                            {usedBy.substring(0, 15)}...
-                          </span>
-                          ) : '-'}
+                                {usedBy}
+                              </span>
+                          ) : (
+                            '-'
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(usedAt)}
@@ -826,8 +885,10 @@ function App() {
                 const usedBy = getUsedBy(invite);
                 const resolvedHandle = usedBy ? handles[usedBy] : null;
                 return (
-                  <div key={invite.code}
-                       className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 space-y-3">
+                  <div
+                    key={invite.code}
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 space-y-3"
+                  >
                     <div className="flex justify-between items-center">
                       <div
                         className="font-mono text-lg font-bold dark:text-white flex items-center gap-2">
@@ -836,29 +897,45 @@ function App() {
                           onClick={() => copyToClipboard(invite.code)}
                           className="text-gray-400 hover:text-blue-600 p-2"
                         >
-                          {copied === invite.code ? <Check className="w-5 h-5 text-green-500"/> :
-                            <Copy className="w-5 h-5"/>}
+                          {copied === invite.code ? (
+                            <Check className="w-5 h-5 text-green-500"/>
+                          ) : (
+                            <Copy className="w-5 h-5"/>
+                          )}
                         </button>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        status === 'Unused' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                          status === 'Used' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          status === 'Unused'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : status === 'Used'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                              : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
                         {status}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
+                      <div className="col-span-1">
                         <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Created
-                          At</p>
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                          Created At
+                        </p>
                         <p className="dark:text-gray-300">{formatDate(invite.createdAt)}</p>
                       </div>
-                      <div>
+                      <div className="col-span-1 text-right">
                         <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Used
-                          By</p>
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                          Used At
+                        </p>
+                        <p className="dark:text-gray-300">{formatDate(usedAt)}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                          Used By
+                        </p>
                         <p className="dark:text-gray-300 truncate">
                           {resolvedHandle ? (
                             <a
@@ -869,18 +946,19 @@ function App() {
                             >
                               {resolvedHandle}
                             </a>
-                          ) : usedBy ? (
-                            <span className="font-mono text-xs" title={usedBy}>
-                              {usedBy.substring(0, 15)}...
-                            </span>
-                          ) : '-'}
+                          ) : (
+                            '-'
+                          )}
                         </p>
                       </div>
-                      <div>
+                      <div className="col-span-2">
                         <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">Used
-                          At</p>
-                        <p className="dark:text-gray-300">{formatDate(usedAt)}</p>
+                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                          DID
+                        </p>
+                        <p className="dark:text-gray-300 font-mono text-xs truncate" title={usedBy}>
+                          {usedBy || '-'}
+                        </p>
                       </div>
                     </div>
                     {status === 'Unused' && (
@@ -914,9 +992,9 @@ function App() {
                 <img src={qrCode} alt="OTP QR Code" className="mx-auto w-48 h-48 md:w-64 md:h-64"/>
               </div>
             )}
-            <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">Scan this QR code
-              with your
-              authenticator app, then enter the code below to verify.</p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+              Scan this QR code with your authenticator app, then enter the code below to verify.
+            </p>
             <div className="space-y-4">
               <input
                 type="text"
@@ -956,8 +1034,9 @@ function App() {
               <ShieldCheck className="text-white w-10 h-10"/>
             </div>
             <h2 className="text-2xl font-bold dark:text-white">Two-Factor Authentication</h2>
-            <p className="text-gray-600 dark:text-gray-400">Please enter the 6-digit code from your
-              authenticator app.</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please enter the 6-digit code from your authenticator app.
+            </p>
             <div className="space-y-4">
               <input
                 type="text"

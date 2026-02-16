@@ -13,7 +13,8 @@
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
     "test": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "build": {
     "appId": "com.northsky.invitecodeclient",
@@ -59,6 +60,7 @@
     "electron": "^40.0.0",
     "electron-builder": "^26.4.0",
     "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
@@ -67,6 +69,7 @@
     "jsdom": "^27.4.0",
     "msw": "^2.12.7",
     "postcss": "^8.4.27",
+    "prettier": "^3.8.1",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.2",
     "typescript-eslint": "^8.54.0",

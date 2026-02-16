@@ -1,10 +1,5 @@
 var cacheName = 'egui-template-pwa';
-var filesToCache = [
-    './',
-    './index.html',
-    './InviteCodeClient.js',
-    './InviteCodeClient_bg.wasm',
-];
+var filesToCache = ['./', './index.html', './InviteCodeClient.js', './InviteCodeClient_bg.wasm'];
 
 /* Start the service worker and cache all of the app's content */
 self.addEventListener('install', function (e) {

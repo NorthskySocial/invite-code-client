@@ -5,7 +5,7 @@ import {apiService} from './api';
 
 const handlers = [
   http.post('https://frontend.myapp.local/api/auth/login', async ({request}) => {
-    const {username} = await request.json() as { username: string };
+    const {username} = (await request.json()) as { username: string };
     if (username === 'testuser') {
       return HttpResponse.json({token: 'fake-token', username: 'testuser'});
     }
@@ -22,7 +22,7 @@ const handlers = [
           forAccount: 'admin',
           createdBy: 'admin',
           createdAt: '2026-01-25T08:02:05.614Z',
-          uses: []
+          uses: [],
         },
         {
           code: 'CODE2',
@@ -31,19 +31,19 @@ const handlers = [
           forAccount: 'admin',
           createdBy: 'admin',
           createdAt: '2026-01-25T08:02:05.614Z',
-          uses: [{usedBy: 'user1', usedAt: '2026-01-25T08:12:55.280Z'}]
+          uses: [{usedBy: 'user1', usedAt: '2026-01-25T08:12:55.280Z'}],
         },
-      ]
+      ],
     });
   }),
 
   http.post('https://frontend.myapp.local/api/create-invite-codes', async ({request}) => {
-    const {codeCount} = await request.json() as { codeCount: number };
+    const {codeCount} = (await request.json()) as { codeCount: number };
     return HttpResponse.json({message: `Created ${codeCount} codes`});
   }),
 
   http.post('https://frontend.myapp.local/api/disable-invite-codes', async ({request}) => {
-    const {code} = await request.json() as { code: string };
+    const {code} = (await request.json()) as { code: string };
     return HttpResponse.json({message: `Disabled code ${code}`});
   }),
 
@@ -62,7 +62,7 @@ const handlers = [
   http.get('https://plc.directory/:did', ({params}) => {
     return HttpResponse.json({
       id: params.did,
-      alsoKnownAs: [`at://handle.test`]
+      alsoKnownAs: [`at://handle.test`],
     });
   }),
 ];
@@ -122,7 +122,7 @@ describe('apiService', () => {
     const response = await apiService.resolveDid('did:plc:123');
     expect(response.data).toEqual({
       id: 'did:plc:123',
-      alsoKnownAs: ['at://handle.test']
+      alsoKnownAs: ['at://handle.test'],
     });
   });
 });
