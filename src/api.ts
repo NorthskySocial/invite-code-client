@@ -76,25 +76,25 @@ export interface AddAdminResponse {
 
 export const apiService = {
   login: (username: string, password: string) =>
-    api.post<LoginResponse>('/api/auth/login', {username, password}),
+    api.post<LoginResponse>('/api/auth/login', { username, password }),
 
   getInviteCodes: () => api.get<InviteCodes>('/api/invite-codes'),
 
   createInviteCodes: (count: number) =>
-    api.post('/api/create-invite-codes', {codeCount: count, useCount: 1}),
+    api.post('/api/create-invite-codes', { codeCount: count, useCount: 1 }),
 
-  disableInviteCode: (code: string) => api.post('/api/disable-invite-codes', {code}),
+  disableInviteCode: (code: string) => api.post('/api/disable-invite-codes', { code }),
 
   generateOtp: () => api.get<GenerateOtpResponse>('/api/auth/otp/generate'),
 
   validateOtp: (token: string): Promise<LoginResponse> =>
-    api.post('/api/auth/otp/validate', {token}),
+    api.post('/api/auth/otp/validate', { token }),
 
-  verifyOtp: (token: string) => api.post('/api/auth/otp/verify', {token}),
+  verifyOtp: (token: string) => api.post('/api/auth/otp/verify', { token }),
 
   getAdmins: () => api.get<AdminsResponse>('/api/admins'),
 
-  addAdmin: (username: string) => api.post<AddAdminResponse>('/api/admins', {username}),
+  addAdmin: (username: string) => api.post<AddAdminResponse>('/api/admins', { username }),
 
   removeAdmin: (username: string) => api.delete(`/api/admins/${username}`),
 
@@ -115,7 +115,7 @@ export const mockApiService = {
         },
       };
     }
-    return {data: {token: 'mock-token', username: 'demo-user'}};
+    return { data: { token: 'mock-token', username: 'demo-user' } };
   },
 
   getInviteCodes: async (): Promise<{ data: InviteCodes }> => {
@@ -137,7 +137,7 @@ export const mockApiService = {
         forAccount: 'demo-user',
         createdBy: 'admin',
         createdAt: new Date(Date.now() - 86400000).toISOString(),
-        uses: [{usedBy: 'did:plc:mockuser', usedAt: new Date().toISOString()}],
+        uses: [{ usedBy: 'did:plc:mockuser', usedAt: new Date().toISOString() }],
       },
       {
         code: 'DISABLED-789',
@@ -149,59 +149,59 @@ export const mockApiService = {
         uses: [],
       },
     ];
-    return {data: {codes}};
+    return { data: { codes } };
   },
 
   createInviteCodes: async (count: number) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     console.log(`Mock: Created ${count} invite codes`);
-    return {data: {success: true}};
+    return { data: { success: true } };
   },
 
   disableInviteCode: async (code: string) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     console.log(`Mock: Disabled code ${code}`);
-    return {data: {success: true}};
+    return { data: { success: true } };
   },
 
   generateOtp: async (): Promise<{ data: GenerateOtpResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return {data: {qr_code: 'mock-qr-code'}};
+    return { data: { qr_code: 'mock-qr-code' } };
   },
 
   validateOtp: async (_token: string) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return {data: {token: 'mock-token'}};
+    return { data: { token: 'mock-token' } };
   },
 
   verifyOtp: async (_token: string) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return {data: {success: true}};
+    return { data: { success: true } };
   },
 
   getAdmins: async (): Promise<{ data: AdminsResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const admins: Admin[] = JSON.parse(
       localStorage.getItem('mock_admins') ||
-      JSON.stringify([
-        {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
-        {username: 'demo-user', createdAt: new Date().toISOString()},
-      ])
+        JSON.stringify([
+          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
+          { username: 'demo-user', createdAt: new Date().toISOString() },
+        ])
     );
-    return {data: {admins}};
+    return { data: { admins } };
   },
 
   addAdmin: async (username: string): Promise<{ data: AddAdminResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const admins = JSON.parse(
       localStorage.getItem('mock_admins') ||
-      JSON.stringify([
-        {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
-        {username: 'demo-user', createdAt: new Date().toISOString()},
-      ])
+        JSON.stringify([
+          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
+          { username: 'demo-user', createdAt: new Date().toISOString() },
+        ])
     );
     if (!admins.find((a: unknown) => a.username === username)) {
-      admins.push({username, createdAt: new Date().toISOString()});
+      admins.push({ username, createdAt: new Date().toISOString() });
       localStorage.setItem('mock_admins', JSON.stringify(admins));
     }
     return {
@@ -217,14 +217,14 @@ export const mockApiService = {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const admins = JSON.parse(
       localStorage.getItem('mock_admins') ||
-      JSON.stringify([
-        {username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString()},
-        {username: 'demo-user', createdAt: new Date().toISOString()},
-      ])
+        JSON.stringify([
+          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
+          { username: 'demo-user', createdAt: new Date().toISOString() },
+        ])
     );
     const filtered = admins.filter((a: unknown) => a.username !== username);
     localStorage.setItem('mock_admins', JSON.stringify(filtered));
-    return {data: {success: true}};
+    return { data: { success: true } };
   },
 
   resolveDid: async (did: string) => {

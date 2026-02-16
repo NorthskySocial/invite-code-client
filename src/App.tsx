@@ -1,5 +1,5 @@
-import {useState, useEffect, useCallback} from 'react';
-import {apiService, mockApiService, updateApiBaseURL, InviteCode, Admin} from './api';
+import { useState, useEffect, useCallback } from 'react';
+import { apiService, mockApiService, updateApiBaseURL, InviteCode, Admin } from './api';
 import {
   LogIn,
   Plus,
@@ -19,7 +19,7 @@ import {
   UserPlus,
   UserMinus,
 } from 'lucide-react';
-import {format, isValid} from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) {
@@ -56,8 +56,8 @@ function App() {
   const [password, setPassword] = useState('');
   const [apiHost, setApiHost] = useState(
     localStorage.getItem('api_host') ||
-    import.meta.env.VITE_API_HOST ||
-    'https://frontend.myapp.local/'
+      import.meta.env.VITE_API_HOST ||
+      'https://frontend.myapp.local/'
   );
   const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
   const activeService = isDemoMode ? mockApiService : apiService;
@@ -185,15 +185,15 @@ function App() {
           const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
           if (handleUri) {
             const handle = handleUri.replace('at://', '');
-            setHandles((prev) => ({...prev, [did]: handle}));
+            setHandles((prev) => ({ ...prev, [did]: handle }));
           } else {
             // If no handle found, we might want to store the DID itself or a placeholder
-            setHandles((prev) => ({...prev, [did]: did}));
+            setHandles((prev) => ({ ...prev, [did]: did }));
           }
         } catch (err) {
           console.error(`Failed to resolve DID: ${did}`, err);
           // Optionally store the DID so we don't keep trying
-          setHandles((prev) => ({...prev, [did]: did}));
+          setHandles((prev) => ({ ...prev, [did]: did }));
         }
       }
     },
@@ -368,7 +368,7 @@ function App() {
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -401,20 +401,18 @@ function App() {
 
   if (page === 'Login') {
     return (
-      <div
-        className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200">
-        <div
-          className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-lg w-full max-w-md border dark:border-gray-700">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-lg w-full max-w-md border dark:border-gray-700">
           <div className="flex flex-col items-center mb-8 relative">
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="absolute right-0 top-0 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
               aria-label="Toggle Theme"
             >
-              {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <div className="bg-blue-600 p-4 rounded-2xl mb-4 shadow-blue-500/20 shadow-lg">
-              <LogIn className="text-white w-8 h-8"/>
+              <LogIn className="text-white w-8 h-8" />
             </div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Invites Client</h1>
             <p className="text-gray-500 dark:text-gray-400 text-center mt-2">
@@ -423,8 +421,7 @@ function App() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div
-              className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg mb-2">
+            <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg mb-2">
               <div className="flex-1">
                 <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Demo Mode</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400">
@@ -446,7 +443,7 @@ function App() {
             </div>
             {!isDemoMode && (
               <div className="relative">
-                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"/>
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Backend API Host (e.g. https://api.example.com)"
@@ -476,8 +473,7 @@ function App() {
               />
             </div>
             {error && (
-              <div
-                className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg">
                 <p className="text-red-500 text-sm text-center">{error}</p>
               </div>
             )}
@@ -486,7 +482,7 @@ function App() {
               disabled={loading}
               className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
             >
-              {isDemoMode && <Zap className="w-5 h-5"/>}
+              {isDemoMode && <Zap className="w-5 h-5" />}
               {loading ? 'Logging in...' : isDemoMode ? 'Start Demo' : 'Login'}
             </button>
           </form>
@@ -498,14 +494,12 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
       {/* Header */}
-      <nav
-        className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7"/>
-              <span
-                className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap hidden sm:inline">
+              <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7" />
+              <span className="font-bold text-base md:text-lg text-gray-800 dark:text-white whitespace-nowrap hidden sm:inline">
                 Invites Manager
               </span>
             </div>
@@ -530,14 +524,14 @@ function App() {
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition min-w-[40px] min-h-[40px] flex items-center justify-center"
               title="Toggle Theme"
             >
-              {darkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <button
               onClick={handleLogout}
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded min-w-[40px] min-h-[40px] flex items-center justify-center"
               title="Logout"
             >
-              <LogOut className="w-5 h-5"/>
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -546,13 +540,11 @@ function App() {
       <main className="max-w-6xl mx-auto p-4 md:p-6">
         {page === 'Admins' && (
           <div className="space-y-6">
-            <div
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2
-                    className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-600"/>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-600" />
                     Manage Admins
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -565,14 +557,13 @@ function App() {
                   className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
                   title="Refresh Admins"
                 >
-                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}/>
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
 
               <form onSubmit={handleAddAdmin} className="flex gap-2 max-w-md mb-8">
                 <div className="relative flex-1">
-                  <UserPlus
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"/>
+                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
                     type="text"
                     placeholder="Username to add"
@@ -591,15 +582,12 @@ function App() {
               </form>
 
               {newAdminPassword && (
-                <div
-                  className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 p-4 rounded-lg mb-6 flex flex-col items-center gap-2">
-                  <div
-                    className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium">
-                    <Check className="w-5 h-5"/>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 p-4 rounded-lg mb-6 flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium">
+                    <Check className="w-5 h-5" />
                     Admin created successfully!
                   </div>
-                  <div
-                    className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded border border-green-200 dark:border-green-800 w-full justify-between">
+                  <div className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded border border-green-200 dark:border-green-800 w-full justify-between">
                     <code className="text-lg font-mono text-gray-800 dark:text-white">
                       {newAdminPassword}
                     </code>
@@ -609,9 +597,9 @@ function App() {
                       title="Copy Password"
                     >
                       {copied === newAdminPassword ? (
-                        <Check className="w-4 h-4 text-green-500"/>
+                        <Check className="w-4 h-4 text-green-500" />
                       ) : (
-                        <Copy className="w-4 h-4 text-gray-500"/>
+                        <Copy className="w-4 h-4 text-gray-500" />
                       )}
                     </button>
                   </div>
@@ -622,8 +610,7 @@ function App() {
               )}
 
               {error && (
-                <div
-                  className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg mb-6">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 p-3 rounded-lg mb-6">
                   <p className="text-red-500 text-sm text-center">{error}</p>
                 </div>
               )}
@@ -631,57 +618,54 @@ function App() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                  <tr className="border-b dark:border-gray-700">
-                    <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Username
-                    </th>
-                    <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Added Date
-                    </th>
-                    <th
-                      className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
-                      Actions
-                    </th>
-                  </tr>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Username
+                      </th>
+                      <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Added Date
+                      </th>
+                      <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
+                        Actions
+                      </th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y dark:divide-gray-700">
-                  {admins.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="py-8 text-center text-gray-500 dark:text-gray-400"
-                      >
-                        No admins found.
-                      </td>
-                    </tr>
-                  ) : (
-                    admins.map((admin) => (
-                      <tr
-                        key={admin.username}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
-                      >
-                        <td className="py-4 px-4">
+                    {admins.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="py-8 text-center text-gray-500 dark:text-gray-400"
+                        >
+                          No admins found.
+                        </td>
+                      </tr>
+                    ) : (
+                      admins.map((admin) => (
+                        <tr
+                          key={admin.username}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+                        >
+                          <td className="py-4 px-4">
                             <span className="font-medium text-gray-800 dark:text-white">
                               {admin.username}
                             </span>
-                        </td>
-                        <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {formatDate(admin.createdAt)}
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={() => handleRemoveAdmin(admin.username)}
-                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-                            title="Remove Admin"
-                          >
-                            <UserMinus className="w-5 h-5"/>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {formatDate(admin.createdAt)}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <button
+                              onClick={() => handleRemoveAdmin(admin.username)}
+                              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                              title="Remove Admin"
+                            >
+                              <UserMinus className="w-5 h-5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -692,8 +676,7 @@ function App() {
         {page === 'Home' && (
           <div className="space-y-6">
             {/* Controls */}
-            <div
-              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -708,14 +691,13 @@ function App() {
                   disabled={loading}
                   className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded flex items-center justify-center gap-2 hover:bg-blue-700 transition font-medium"
                 >
-                  <Plus className="w-4 h-4"/> Generate
+                  <Plus className="w-4 h-4" /> Generate
                 </button>
               </div>
 
-              <div
-                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2 relative">
-                  <Filter className="w-4 h-4 text-gray-400 absolute left-3"/>
+                  <Filter className="w-4 h-4 text-gray-400 absolute left-3" />
                   <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value as FilterStatus)}
@@ -733,7 +715,7 @@ function App() {
                     onClick={downloadCsv}
                     className="flex-1 sm:flex-none p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 flex items-center justify-center gap-2"
                   >
-                    <Download className="w-4 h-4"/> Export CSV
+                    <Download className="w-4 h-4" /> Export CSV
                   </button>
 
                   <button
@@ -741,82 +723,72 @@ function App() {
                     disabled={loading}
                     className="p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 min-w-[44px] flex items-center justify-center"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}/>
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
             </div>
 
             {error && (
-              <p
-                className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">
+              <p className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">
                 {error}
               </p>
             )}
 
             {/* Desktop Table - Hidden on Mobile */}
-            <div
-              className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
-                  <tr>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Invite Code
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Created At
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Used By
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      DID
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Used At
-                    </th>
-                    <th
-                      className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right">
-                      Actions
-                    </th>
-                  </tr>
+                    <tr>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Invite Code
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Created At
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Used By
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        DID
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Used At
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right">
+                        Actions
+                      </th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {filteredInvites.map((invite) => {
-                    const status = getStatus(invite);
-                    const usedAt = getUsedAt(invite);
-                    const usedBy = getUsedBy(invite);
-                    const resolvedHandle = usedBy ? handles[usedBy] : null;
-                    return (
-                      <tr
-                        key={invite.code}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
-                      >
-                        <td
-                          className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
-                          {invite.code}
-                          <button
-                            onClick={() => copyToClipboard(invite.code)}
-                            className="text-gray-400 hover:text-blue-600 p-1"
-                          >
-                            {copied === invite.code ? (
-                              <Check className="w-4 h-4 text-green-500"/>
-                            ) : (
-                              <Copy className="w-4 h-4"/>
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
+                    {filteredInvites.map((invite) => {
+                      const status = getStatus(invite);
+                      const usedAt = getUsedAt(invite);
+                      const usedBy = getUsedBy(invite);
+                      const resolvedHandle = usedBy ? handles[usedBy] : null;
+                      return (
+                        <tr
+                          key={invite.code}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                        >
+                          <td className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
+                            {invite.code}
+                            <button
+                              onClick={() => copyToClipboard(invite.code)}
+                              className="text-gray-400 hover:text-blue-600 p-1"
+                            >
+                              {copied === invite.code ? (
+                                <Check className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 status === 'Unused'
@@ -828,50 +800,50 @@ function App() {
                             >
                               {status}
                             </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(invite.createdAt)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {resolvedHandle ? (
-                            <a
-                              href={`https://bsky.app/profile/${resolvedHandle}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              {resolvedHandle}
-                            </a>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {usedBy ? (
-                            <span className="font-mono text-xs" title={usedBy}>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(invite.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {resolvedHandle ? (
+                              <a
+                                href={`https://bsky.app/profile/${resolvedHandle}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                {resolvedHandle}
+                              </a>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {usedBy ? (
+                              <span className="font-mono text-xs" title={usedBy}>
                                 {usedBy}
                               </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(usedAt)}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          {status === 'Unused' && (
-                            <button
-                              onClick={() => handleDisableInvite(invite.code)}
-                              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
-                              title="Disable"
-                            >
-                              <Trash2 className="w-4 h-4"/>
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(usedAt)}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {status === 'Unused' && (
+                              <button
+                                onClick={() => handleDisableInvite(invite.code)}
+                                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
+                                title="Disable"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -890,17 +862,16 @@ function App() {
                     className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 space-y-3"
                   >
                     <div className="flex justify-between items-center">
-                      <div
-                        className="font-mono text-lg font-bold dark:text-white flex items-center gap-2">
+                      <div className="font-mono text-lg font-bold dark:text-white flex items-center gap-2">
                         {invite.code}
                         <button
                           onClick={() => copyToClipboard(invite.code)}
                           className="text-gray-400 hover:text-blue-600 p-2"
                         >
                           {copied === invite.code ? (
-                            <Check className="w-5 h-5 text-green-500"/>
+                            <Check className="w-5 h-5 text-green-500" />
                           ) : (
-                            <Copy className="w-5 h-5"/>
+                            <Copy className="w-5 h-5" />
                           )}
                         </button>
                       </div>
@@ -918,22 +889,19 @@ function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="col-span-1">
-                        <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           Created At
                         </p>
                         <p className="dark:text-gray-300">{formatDate(invite.createdAt)}</p>
                       </div>
                       <div className="col-span-1 text-right">
-                        <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           Used At
                         </p>
                         <p className="dark:text-gray-300">{formatDate(usedAt)}</p>
                       </div>
                       <div className="col-span-2">
-                        <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           Used By
                         </p>
                         <p className="dark:text-gray-300 truncate">
@@ -952,8 +920,7 @@ function App() {
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <p
-                          className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           DID
                         </p>
                         <p className="dark:text-gray-300 font-mono text-xs truncate" title={usedBy}>
@@ -967,7 +934,7 @@ function App() {
                           onClick={() => handleDisableInvite(invite.code)}
                           className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded transition border border-red-100 dark:border-red-900/30"
                         >
-                          <Trash2 className="w-4 h-4"/> Disable Invite
+                          <Trash2 className="w-4 h-4" /> Disable Invite
                         </button>
                       </div>
                     )}
@@ -975,8 +942,7 @@ function App() {
                 );
               })}
               {filteredInvites.length === 0 && (
-                <div
-                  className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
                   <p className="text-gray-500 dark:text-gray-400">No invite codes found</p>
                 </div>
               )}
@@ -989,7 +955,7 @@ function App() {
             <h2 className="text-xl font-bold dark:text-white">Setup Multi-Factor Authentication</h2>
             {qrCode && (
               <div className="bg-white p-4 rounded-xl shadow-md inline-block">
-                <img src={qrCode} alt="OTP QR Code" className="mx-auto w-48 h-48 md:w-64 md:h-64"/>
+                <img src={qrCode} alt="OTP QR Code" className="mx-auto w-48 h-48 md:w-64 md:h-64" />
               </div>
             )}
             <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
@@ -1031,7 +997,7 @@ function App() {
         {page === 'QrValidate' && (
           <div className="max-w-md mx-auto space-y-6 text-center px-2">
             <div className="bg-blue-600 p-4 rounded-2xl mx-auto w-fit shadow-lg shadow-blue-500/20">
-              <ShieldCheck className="text-white w-10 h-10"/>
+              <ShieldCheck className="text-white w-10 h-10" />
             </div>
             <h2 className="text-2xl font-bold dark:text-white">Two-Factor Authentication</h2>
             <p className="text-gray-600 dark:text-gray-400">
