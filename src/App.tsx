@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiService, mockApiService, updateApiBaseURL, InviteCode, Admin } from './api';
+import {
+  apiService,
+  mockApiService,
+  updateApiBaseURL,
+  InviteCode,
+  Admin,
+  isAxiosError,
+} from './api';
 import {
   LogIn,
   Plus,
@@ -71,78 +78,6 @@ function App() {
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
 
-  const fetchInvites = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await activeService.getInviteCodes();
-      const data = response.data?.codes || [];
-      setInvites(Array.isArray(data) ? data : []);
-      setError(null);
-      if (Array.isArray(data)) {
-        resolveHandles(data);
-      }
-    } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to fetch invites');
-      if (err.response?.status === 401) {
-        handleLogout();
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [activeService, resolveHandles]);
-
-  const fetchAdmins = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await activeService.getAdmins();
-      setAdmins(response.data?.admins || []);
-      setError(null);
-    } catch (err: unknown) {
-      console.error('Failed to fetch admins', err);
-      setError(err.response?.data?.error || 'Failed to fetch admins');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeService, setAdmins, setError]);
-
-  const handleAddAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAdminUsername.trim()) {
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setNewAdminPassword(null);
-    try {
-      const response = await activeService.addAdmin(newAdminUsername.trim());
-      setNewAdminUsername('');
-      if (response.data.password) {
-        setNewAdminPassword(response.data.password);
-      }
-      fetchAdmins();
-    } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to add admin');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveAdmin = async (username: string) => {
-    if (!confirm(`Are you sure you want to remove ${username} as an admin?`)) {
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      await activeService.removeAdmin(username);
-      fetchAdmins();
-    } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to remove admin');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getStatus = (invite: InviteCode): FilterStatus => {
     if (invite.disabled) {
       return 'Disabled';
@@ -200,6 +135,93 @@ function App() {
     [activeService, handles]
   );
 
+  const fetchInvites = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await activeService.getInviteCodes();
+      const data = response.data?.codes || [];
+      setInvites(Array.isArray(data) ? data : []);
+      setError(null);
+      if (Array.isArray(data)) {
+        resolveHandles(data);
+      }
+    } catch (err: unknown) {
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'Failed to fetch invites'
+          : 'An error occurred'
+      );
+      if (isAxiosError(err) && err.response?.status === 401) {
+        handleLogout();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [activeService, resolveHandles]);
+
+  const fetchAdmins = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await activeService.getAdmins();
+      setAdmins(response.data?.admins || []);
+      setError(null);
+    } catch (err: unknown) {
+      console.error('Failed to fetch admins', err);
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'Failed to fetch admins'
+          : 'An error occurred'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [activeService, setAdmins, setError]);
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedUsername = newAdminUsername.trim();
+    if (!trimmedUsername) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setNewAdminPassword(null);
+    try {
+      const response = await activeService.addAdmin(trimmedUsername);
+      setNewAdminUsername('');
+      if (response.data.password) {
+        setNewAdminPassword(response.data.password);
+      }
+      await fetchAdmins();
+    } catch (err: unknown) {
+      setError(
+        isAxiosError(err) ? err.response?.data?.error || 'Failed to add admin' : 'An error occurred'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (username: string) => {
+    if (!confirm(`Are you sure you want to remove ${username} as an admin?`)) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await activeService.removeAdmin(username);
+      await fetchAdmins();
+    } catch (err: unknown) {
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'Failed to remove admin'
+          : 'An error occurred'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const applyFilter = useCallback(() => {
     if (filter === 'All') {
       setFilteredInvites(invites);
@@ -252,7 +274,9 @@ function App() {
         setPage('Home');
       }
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(
+        isAxiosError(err) ? err.response?.data?.error || 'Login failed' : 'An error occurred'
+      );
     } finally {
       setLoading(false);
     }
@@ -273,9 +297,13 @@ function App() {
     setError(null);
     try {
       await activeService.createInviteCodes(inviteCount);
-      fetchInvites();
+      await fetchInvites();
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to create invites');
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'Failed to create invites'
+          : 'An error occurred'
+      );
     } finally {
       setLoading(false);
     }
@@ -285,27 +313,15 @@ function App() {
     setError(null);
     try {
       await activeService.disableInviteCode(code);
-      fetchInvites();
+      await fetchInvites();
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to disable invite');
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'Failed to disable invite'
+          : 'An error occurred'
+      );
     }
   };
-
-  // Not used currently
-  /*
-  const handleGenerateOtp = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await activeService.generateOtp();
-      setQrCode(response.data.qr_code);
-    } catch (err: unknown) {
-      setError(err.response?.data?.error || 'Failed to generate QR');
-    } finally {
-      setLoading(false);
-    }
-  };
-  */
 
   const handleVerifyOtp = async () => {
     setLoading(true);
@@ -315,7 +331,11 @@ function App() {
       alert('OTP Verified successfully');
       setPage('Home');
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'OTP Verification failed');
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'OTP Verification failed'
+          : 'An error occurred'
+      );
     } finally {
       setLoading(false);
     }
@@ -326,7 +346,7 @@ function App() {
     setError(null);
     try {
       const response = await activeService.validateOtp(otpToken);
-      const token = (response.data as unknown).token;
+      const token = (response.data as unknown as { token?: string }).token;
       if (token) {
         localStorage.setItem('token', token);
         setToken(token);
@@ -337,7 +357,11 @@ function App() {
         setPage('Home');
       }
     } catch (err: unknown) {
-      setError(err.response?.data?.error || 'OTP Validation failed');
+      setError(
+        isAxiosError(err)
+          ? err.response?.data?.error || 'OTP Validation failed'
+          : 'An error occurred'
+      );
     } finally {
       setLoading(false);
     }
