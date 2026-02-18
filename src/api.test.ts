@@ -43,8 +43,8 @@ const handlers = [
   }),
 
   http.post('https://frontend.myapp.local/api/disable-invite-codes', async ({ request }) => {
-    const { code } = (await request.json()) as { code: string };
-    return HttpResponse.json({ message: `Disabled code ${code}` });
+    const { codes } = (await request.json()) as { codes: string[] };
+    return HttpResponse.json({ message: `Disabled code ${codes[0]}` });
   }),
 
   http.get('https://frontend.myapp.local/api/auth/otp/generate', () => {
