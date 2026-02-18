@@ -80,13 +80,14 @@ export const apiService = {
   login: (username: string, password: string): Promise<AxiosResponse<LoginResponse>> =>
     api.post<LoginResponse>('/api/auth/login', { username, password }),
 
-  getInviteCodes: (): Promise<AxiosResponse<InviteCodes>> => api.get<InviteCodes>('/api/invite-codes'),
+  getInviteCodes: (): Promise<AxiosResponse<InviteCodes>> =>
+    api.get<InviteCodes>('/api/invite-codes'),
 
   createInviteCodes: (count: number): Promise<AxiosResponse<{ success: boolean }>> =>
     api.post('/api/create-invite-codes', { codeCount: count, useCount: 1 }),
 
   disableInviteCode: (code: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.post('/api/disable-invite-codes', { code }),
+    api.post('/api/disable-invite-codes', { codes: [code] }),
 
   generateOtp: (): Promise<AxiosResponse<GenerateOtpResponse>> =>
     api.get<GenerateOtpResponse>('/api/auth/otp/generate'),
