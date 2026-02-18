@@ -268,9 +268,17 @@ function App() {
           setQrCode(qrCodeUrl);
           setPage('QrVerify');
         } else {
+          if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+            setToken(response.data.token);
+          }
           setPage('Home');
         }
       } else {
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+          setToken(response.data.token);
+        }
         setPage('Home');
       }
     } catch (err: unknown) {
@@ -327,7 +335,12 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      await activeService.verifyOtp(otpToken);
+      const response = await activeService.verifyOtp(otpToken);
+      const token = (response.data as unknown as { token?: string }).token;
+      if (token) {
+        localStorage.setItem('token', token);
+        setToken(token);
+      }
       alert('OTP Verified successfully');
       setPage('Home');
     } catch (err: unknown) {
