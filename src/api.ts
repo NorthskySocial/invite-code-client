@@ -87,7 +87,7 @@ export const apiService = {
     api.post('/api/create-invite-codes', { codeCount: count, useCount: 1 }),
 
   disableInviteCode: (code: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.post('/api/disable-invite-codes', { codes: [code] }),
+    api.post('/api/disable-invite-codes', { codes: [code], accounts: [] }),
 
   generateOtp: (): Promise<AxiosResponse<GenerateOtpResponse>> =>
     api.get<GenerateOtpResponse>('/api/auth/otp/generate'),
