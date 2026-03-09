@@ -110,7 +110,7 @@ export const apiService = {
     axios.get(`https://plc.directory/${did}`),
 
   getAccountEmail: (did: string): Promise<AxiosResponse<{ email: string | null }>> =>
-    api.get(`/account/email`, { params: { did } }),
+    api.get(`/api/account/email`, { params: { did } }),
 };
 
 export const mockApiService = {
