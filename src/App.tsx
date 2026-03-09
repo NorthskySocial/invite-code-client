@@ -74,6 +74,7 @@ function App() {
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
+  const [emails, setEmails] = useState<Record<string, string>>({});
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
@@ -125,6 +126,21 @@ function App() {
             // If no handle found, we might want to store the DID itself or a placeholder
             setHandles((prev) => ({ ...prev, [did]: did }));
           }
+
+          // Also resolve email if not already present
+          if (!emails[did]) {
+            try {
+              const emailResponse = await activeService.getAccountEmail(did);
+              if (emailResponse.data?.email) {
+                setEmails((prev) => ({ ...prev, [did]: emailResponse.data.email! }));
+              } else {
+                setEmails((prev) => ({ ...prev, [did]: '-' }));
+              }
+            } catch (err) {
+              console.error(`Failed to resolve email for DID: ${did}`, err);
+              setEmails((prev) => ({ ...prev, [did]: '-' }));
+            }
+          }
         } catch (err) {
           console.error(`Failed to resolve DID: ${did}`, err);
           // Optionally store the DID so we don't keep trying
@@ -132,7 +148,7 @@ function App() {
         }
       }
     },
-    [activeService, handles]
+    [activeService, handles, emails]
   );
 
   const fetchInvites = useCallback(async () => {
@@ -387,17 +403,19 @@ function App() {
   };
 
   const downloadCsv = () => {
-    const headers = ['Invite Code', 'Status', 'Created At', 'Used By', 'Used At'];
+    const headers = ['Invite Code', 'Status', 'Created At', 'Used By', 'Email', 'Used At'];
     const rows = filteredInvites.map((invite) => {
       const usedBy = getUsedBy(invite);
       const resolvedHandle = usedBy ? handles[usedBy] : null;
       const usedByText = resolvedHandle || usedBy || '-';
+      const emailText = (usedBy && emails[usedBy]) || '-';
 
       return [
         invite.code,
         getStatus(invite),
         formatDate(invite.createdAt),
         usedByText,
+        emailText,
         formatDate(getUsedAt(invite)),
       ]
         .map((val) => `"${String(val).replace(/"/g, '""')}"`)
@@ -791,6 +809,9 @@ function App() {
                         Used By
                       </th>
                       <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                         DID
                       </th>
                       <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -854,6 +875,9 @@ function App() {
                             ) : (
                               '-'
                             )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {usedBy && emails[usedBy] ? emails[usedBy] : '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {usedBy ? (
@@ -936,6 +960,14 @@ function App() {
                           Used At
                         </p>
                         <p className="dark:text-gray-300">{formatDate(usedAt)}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
+                          Email
+                        </p>
+                        <p className="dark:text-gray-300 truncate">
+                          {usedBy && emails[usedBy] ? emails[usedBy] : '-'}
+                        </p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">

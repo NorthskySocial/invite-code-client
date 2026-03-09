@@ -108,6 +108,9 @@ export const apiService = {
 
   resolveDid: (did: string): Promise<AxiosResponse<{ alsoKnownAs: string[] }>> =>
     axios.get(`https://plc.directory/${did}`),
+
+  getAccountEmail: (did: string): Promise<AxiosResponse<{ email: string | null }>> =>
+    api.get(`/account/email`, { params: { did } }),
 };
 
 export const mockApiService = {
@@ -243,5 +246,10 @@ export const mockApiService = {
         alsoKnownAs: [`at://${did.replace('did:plc:', '')}.bsky.social`],
       },
     };
+  },
+
+  getAccountEmail: async (did: string): Promise<{ data: { email: string | null } }> => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return { data: { email: `${did.replace('did:plc:', '')}@example.com` } };
   },
 };
