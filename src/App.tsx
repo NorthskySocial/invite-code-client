@@ -115,19 +115,7 @@ function App() {
 
       for (const did of didsToResolve) {
         try {
-          const response = await activeService.resolveDid(did);
-          // PLC directory response has 'alsoKnownAs' array with 'at://handle'
-          const alsoKnownAs = response.data?.alsoKnownAs || [];
-          const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
-          if (handleUri) {
-            const handle = handleUri.replace('at://', '');
-            setHandles((prev) => ({ ...prev, [did]: handle }));
-          } else {
-            // If no handle found, we might want to store the DID itself or a placeholder
-            setHandles((prev) => ({ ...prev, [did]: did }));
-          }
-
-          // Also resolve email if not already present
+          // Resolve email first if not already present
           if (!emails[did]) {
             try {
               const emailResponse = await activeService.getAccountEmail(did);
@@ -141,8 +129,21 @@ function App() {
               setEmails((prev) => ({ ...prev, [did]: '-' }));
             }
           }
+
+          // Then resolve handle
+          const response = await activeService.resolveDid(did);
+          // PLC directory response has 'alsoKnownAs' array with 'at://handle'
+          const alsoKnownAs = response.data?.alsoKnownAs || [];
+          const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
+          if (handleUri) {
+            const handle = handleUri.replace('at://', '');
+            setHandles((prev) => ({ ...prev, [did]: handle }));
+          } else {
+            // If no handle found, we might want to store the DID itself or a placeholder
+            setHandles((prev) => ({ ...prev, [did]: did }));
+          }
         } catch (err) {
-          console.error(`Failed to resolve DID: ${did}`, err);
+          console.error(`Failed to resolve DID handle for DID: ${did}`, err);
           // Optionally store the DID so we don't keep trying
           setHandles((prev) => ({ ...prev, [did]: did }));
         }
