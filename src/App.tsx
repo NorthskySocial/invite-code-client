@@ -106,31 +106,49 @@ function App() {
   const resolveHandles = useCallback(
     async (invitesList: InviteCode[]) => {
       const didsToResolve = new Set<string>();
+      const emailsToResolve = new Set<string>();
+      
       invitesList.forEach((invite) => {
         const usedBy = getUsedBy(invite);
-        if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
-          didsToResolve.add(usedBy);
+        if (usedBy && usedBy.startsWith('did:')) {
+          if (!handles[usedBy]) {
+            didsToResolve.add(usedBy);
+          }
+          if (!emails[usedBy]) {
+            emailsToResolve.add(usedBy);
+          }
         }
       });
 
+      // Resolve emails in batch first
+      if (emailsToResolve.size > 0) {
+        try {
+          const emailResponse = await activeService.getAccountEmails(Array.from(emailsToResolve));
+          const resolvedEmails = emailResponse.data?.emails || {};
+          
+          setEmails((prev) => {
+            const next = { ...prev };
+            emailsToResolve.forEach((did) => {
+              next[did] = resolvedEmails[did] || '-';
+            });
+            return next;
+          });
+        } catch (err) {
+          console.error('Failed to resolve emails in batch', err);
+          // Fallback: mark as unresolved so we don't keep trying
+          setEmails((prev) => {
+            const next = { ...prev };
+            emailsToResolve.forEach((did) => {
+              next[did] = '-';
+            });
+            return next;
+          });
+        }
+      }
+
+      // Then resolve handles individually (PLC directory doesn't seem to have a batch API)
       for (const did of didsToResolve) {
         try {
-          // Resolve email first if not already present
-          if (!emails[did]) {
-            try {
-              const emailResponse = await activeService.getAccountEmail(did);
-              if (emailResponse.data?.email) {
-                setEmails((prev) => ({ ...prev, [did]: emailResponse.data.email! }));
-              } else {
-                setEmails((prev) => ({ ...prev, [did]: '-' }));
-              }
-            } catch (err) {
-              console.error(`Failed to resolve email for DID: ${did}`, err);
-              setEmails((prev) => ({ ...prev, [did]: '-' }));
-            }
-          }
-
-          // Then resolve handle
           const response = await activeService.resolveDid(did);
           // PLC directory response has 'alsoKnownAs' array with 'at://handle'
           const alsoKnownAs = response.data?.alsoKnownAs || [];
