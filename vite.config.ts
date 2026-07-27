@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+const execArgv = process.allowedNodeEnvironmentFlags.has('--no-experimental-webstorage')
+  ? ['--no-experimental-webstorage']
+  : [];
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -17,6 +21,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
-    execArgv: ['--no-experimental-webstorage'],
+    execArgv,
   },
 });
