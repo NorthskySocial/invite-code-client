@@ -76,5 +76,8 @@
     "vite": "7.1.11",
     "vitest": "^4.0.18",
     "wait-on": "^9.0.3"
+  },
+  "overrides": {
+    "vite": "$vite"
   }
 }
