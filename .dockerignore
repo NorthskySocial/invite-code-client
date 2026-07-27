@@ -3,7 +3,6 @@ dist
 .git
 .gitignore
 README.md
-flake.nix
 docker-compose.yml
 Dockerfile
 .dockerignore
