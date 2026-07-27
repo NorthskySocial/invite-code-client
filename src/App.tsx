@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   apiService,
   mockApiService,
@@ -55,7 +55,6 @@ function App() {
     );
   });
   const [invites, setInvites] = useState<InviteCode[]>([]);
-  const [filteredInvites, setFilteredInvites] = useState<InviteCode[]>([]);
   const [filter, setFilter] = useState<FilterStatus>('All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,11 +102,28 @@ function App() {
     return undefined;
   };
 
+  const filteredInvites = useMemo(() => {
+    if (filter === 'All') {
+      return invites;
+    }
+    return invites.filter((invite) => getStatus(invite) === filter);
+  }, [invites, filter]);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setTwoFactorToken(null);
+    setQrCode(null);
+    setOtpToken('');
+    setError(null);
+    setPage('Login');
+  }, []);
+
   const resolveHandles = useCallback(
     async (invitesList: InviteCode[]) => {
       const didsToResolve = new Set<string>();
       const emailsToResolve = new Set<string>();
-      
+
       invitesList.forEach((invite) => {
         const usedBy = getUsedBy(invite);
         if (usedBy && usedBy.startsWith('did:')) {
@@ -125,7 +141,7 @@ function App() {
         try {
           const emailResponse = await activeService.getAccountEmails(Array.from(emailsToResolve));
           const resolvedEmails = emailResponse.data?.emails || {};
-          
+
           setEmails((prev) => {
             const next = { ...prev };
             emailsToResolve.forEach((did) => {
@@ -192,7 +208,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeService, resolveHandles]);
+  }, [activeService, resolveHandles, handleLogout]);
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
@@ -257,14 +273,6 @@ function App() {
     }
   };
 
-  const applyFilter = useCallback(() => {
-    if (filter === 'All') {
-      setFilteredInvites(invites);
-    } else {
-      setFilteredInvites(invites.filter((i) => getStatus(i) === filter));
-    }
-  }, [invites, filter]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -323,16 +331,6 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setTwoFactorToken(null);
-    setQrCode(null);
-    setOtpToken('');
-    setError(null);
-    setPage('Login');
   };
 
   const handleCreateInvites = async () => {
@@ -453,10 +451,22 @@ function App() {
 
   const isAdminPage = page === 'Admins';
   useEffect(() => {
-    if (token) {
-      fetchInvites();
-      fetchAdmins();
+    if (!token) {
+      return;
     }
+    let cancelled = false;
+    // Defer to a microtask so the fetch helpers don't set state synchronously
+    // during the effect, which would trigger cascading renders.
+    void Promise.resolve().then(() => {
+      if (cancelled) {
+        return;
+      }
+      void fetchInvites();
+      void fetchAdmins();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [token, isAdminPage, fetchInvites, fetchAdmins]);
 
   useEffect(() => {
@@ -468,10 +478,6 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
-
-  useEffect(() => {
-    applyFilter();
-  }, [invites, filter, applyFilter]);
 
   if (page === 'Login') {
     return (
