@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   apiService,
   mockApiService,
@@ -90,11 +90,6 @@ function App() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
-  const [handles, setHandles] = useState<Record<string, string>>({});
-  const handlesRef = useRef(handles);
-  useEffect(() => {
-    handlesRef.current = handles;
-  }, [handles]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
@@ -123,6 +118,10 @@ function App() {
     return undefined;
   };
 
+  const getUsedByHandle = (invite: InviteCode): string | null => {
+    return invite.uses?.[0]?.usedByHandle || null;
+  };
+
   // Returns null when the API does not report the flag for this invite.
   const getAccountStatus = (invite: InviteCode): 'Active' | 'Deactivated' | null => {
     const deactivated = invite.uses?.[0]?.usedByDeactivated;
@@ -148,40 +147,6 @@ function App() {
     setPage('Login');
   }, []);
 
-  const resolveHandles = useCallback(
-    async (invitesList: InviteCode[]) => {
-      const didsToResolve = new Set<string>();
-
-      invitesList.forEach((invite) => {
-        const usedBy = getUsedBy(invite);
-        if (usedBy && usedBy.startsWith('did:') && !handlesRef.current[usedBy]) {
-          didsToResolve.add(usedBy);
-        }
-      });
-
-      // Resolve handles individually (PLC directory doesn't seem to have a batch API)
-      const resolved: Record<string, string> = {};
-      for (const did of didsToResolve) {
-        try {
-          const response = await activeService.resolveDid(did);
-          // PLC directory response has 'alsoKnownAs' array with 'at://handle'
-          const alsoKnownAs = response.data?.alsoKnownAs || [];
-          const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
-          resolved[did] = handleUri ? handleUri.replace('at://', '') : did;
-        } catch (err) {
-          console.error(`Failed to resolve DID handle for DID: ${did}`, err);
-          // Store the DID so we don't keep trying
-          resolved[did] = did;
-        }
-      }
-
-      if (Object.keys(resolved).length > 0) {
-        setHandles((prev) => ({ ...prev, ...resolved }));
-      }
-    },
-    [activeService]
-  );
-
   const fetchInvites = useCallback(async () => {
     setLoading(true);
     try {
@@ -189,9 +154,6 @@ function App() {
       const data = response.data?.codes || [];
       setInvites(Array.isArray(data) ? data : []);
       setError(null);
-      if (Array.isArray(data)) {
-        resolveHandles(data);
-      }
     } catch (err: unknown) {
       setError(
         isAxiosError(err)
@@ -204,7 +166,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeService, resolveHandles, handleLogout]);
+  }, [activeService, handleLogout]);
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
@@ -425,7 +387,7 @@ function App() {
     ];
     const rows = filteredInvites.map((invite) => {
       const usedBy = getUsedBy(invite);
-      const resolvedHandle = usedBy ? handles[usedBy] : null;
+      const resolvedHandle = getUsedByHandle(invite);
       const usedByText = resolvedHandle || usedBy || '-';
       const emailText = invite.uses?.[0]?.usedByEmail || '-';
 
@@ -858,7 +820,7 @@ function App() {
                       const status = getStatus(invite);
                       const usedAt = getUsedAt(invite);
                       const usedBy = getUsedBy(invite);
-                      const resolvedHandle = usedBy ? handles[usedBy] : null;
+                      const resolvedHandle = getUsedByHandle(invite);
                       const accountStatus = getAccountStatus(invite);
                       return (
                         <tr
@@ -961,7 +923,7 @@ function App() {
                 const status = getStatus(invite);
                 const usedAt = getUsedAt(invite);
                 const usedBy = getUsedBy(invite);
-                const resolvedHandle = usedBy ? handles[usedBy] : null;
+                const resolvedHandle = getUsedByHandle(invite);
                 const accountStatus = getAccountStatus(invite);
                 return (
                   <div

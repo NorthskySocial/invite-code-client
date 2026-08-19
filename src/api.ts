@@ -42,6 +42,7 @@ export interface InviteCode {
   createdAt: string;
   uses: {
     usedBy: string;
+    usedByHandle?: string | null;
     usedByEmail?: string | null;
     usedAt: string;
     usedByDeactivated?: boolean;
@@ -105,9 +106,6 @@ export const apiService = {
 
   removeAdmin: (username: string): Promise<AxiosResponse<{ success: boolean }>> =>
     api.delete(`/api/admins/${username}`),
-
-  resolveDid: (did: string): Promise<AxiosResponse<{ alsoKnownAs: string[] }>> =>
-    axios.get(`https://plc.directory/${did}`),
 };
 
 export const mockApiService = {
@@ -149,6 +147,7 @@ export const mockApiService = {
         uses: [
           {
             usedBy: 'did:plc:mockuser',
+            usedByHandle: 'mockuser.bsky.social',
             usedAt: new Date().toISOString(),
             usedByDeactivated: false,
           },
@@ -164,6 +163,7 @@ export const mockApiService = {
         uses: [
           {
             usedBy: 'did:plc:mockgone',
+            usedByHandle: 'mockgone.bsky.social',
             usedAt: new Date(Date.now() - 172800000).toISOString(),
             usedByDeactivated: true,
           },
@@ -255,14 +255,5 @@ export const mockApiService = {
     const filtered = admins.filter((a: Admin) => a.username !== username);
     localStorage.setItem('mock_admins', JSON.stringify(filtered));
     return { data: { success: true } };
-  },
-
-  resolveDid: async (did: string): Promise<{ data: { alsoKnownAs: string[] } }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return {
-      data: {
-        alsoKnownAs: [`at://${did.replace('did:plc:', '')}.bsky.social`],
-      },
-    };
   },
 };

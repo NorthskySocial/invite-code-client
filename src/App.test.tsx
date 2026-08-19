@@ -407,7 +407,7 @@ describe('OTP verification and validation', () => {
   });
 });
 
-describe('DID handle resolution', () => {
+describe('used-by handle', () => {
   const didInvites = [
     {
       code: 'DID-CODE',
@@ -416,16 +416,19 @@ describe('DID handle resolution', () => {
       forAccount: 'admin',
       createdBy: 'admin',
       createdAt: '2026-01-25T08:02:05.614Z',
-      uses: [{ usedBy: 'did:plc:abc', usedAt: '2026-01-25T08:12:55.280Z' }],
+      uses: [
+        {
+          usedBy: 'did:plc:abc',
+          usedByHandle: 'alice.bsky.social',
+          usedAt: '2026-01-25T08:12:55.280Z',
+        },
+      ],
     },
   ];
 
-  it('resolves a DID to a handle and renders a profile link', async () => {
+  it('renders a profile link for the handle returned by the API', async () => {
     server.use(
-      http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: didInvites })),
-      http.get('https://plc.directory/:did', () =>
-        HttpResponse.json({ alsoKnownAs: ['at://alice.bsky.social'] })
-      )
+      http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: didInvites }))
     );
 
     renderLoggedIn();
@@ -437,39 +440,18 @@ describe('DID handle resolution', () => {
     expect(link).toHaveAttribute('href', 'https://bsky.app/profile/alice.bsky.social');
   });
 
-  it('resolves each unique DID only once', async () => {
-    let plcRequests = 0;
-    const twoUses = [
-      { ...didInvites[0], code: 'DID-1' },
-      { ...didInvites[0], code: 'DID-2' },
+  it('falls back to a dash when the API returns no handle', async () => {
+    const noHandle = [
+      { ...didInvites[0], uses: [{ usedBy: 'did:plc:abc', usedAt: '2026-01-25T08:12:55.280Z' }] },
     ];
     server.use(
-      http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: twoUses })),
-      http.get('https://plc.directory/:did', () => {
-        plcRequests += 1;
-        return HttpResponse.json({ alsoKnownAs: ['at://alice.bsky.social'] });
-      })
+      http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: noHandle }))
     );
 
     renderLoggedIn();
 
-    await waitFor(() =>
-      expect(screen.getAllByText('alice.bsky.social').length).toBeGreaterThan(0)
-    );
-    expect(plcRequests).toBe(1);
-  });
-
-  it('logs an error and falls back to the DID when resolution fails', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    server.use(
-      http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: didInvites })),
-      http.get('https://plc.directory/:did', () => new HttpResponse(null, { status: 500 }))
-    );
-
-    renderLoggedIn();
-
-    await waitFor(() => expect(errorSpy).toHaveBeenCalled());
-    errorSpy.mockRestore();
+    await expectCodeVisible('DID-CODE');
+    expect(screen.queryByRole('link', { name: 'alice.bsky.social' })).not.toBeInTheDocument();
   });
 });
 

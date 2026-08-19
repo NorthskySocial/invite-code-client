@@ -59,13 +59,6 @@ const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  http.get('https://plc.directory/:did', ({ params }) => {
-    return HttpResponse.json({
-      id: params.did,
-      alsoKnownAs: [`at://handle.test`],
-    });
-  }),
-
   http.get('https://frontend.myapp.local/api/admins', () => {
     return HttpResponse.json({
       admins: [{ username: 'admin', createdAt: '2026-01-25T08:02:05.614Z' }],
@@ -135,14 +128,6 @@ describe('apiService', () => {
   it('verifyOtp should return success', async () => {
     const response = await apiService.verifyOtp('123456');
     expect(response.data).toEqual({ success: true });
-  });
-
-  it('resolveDid should return PLC data', async () => {
-    const response = await apiService.resolveDid('did:plc:123');
-    expect(response.data).toEqual({
-      id: 'did:plc:123',
-      alsoKnownAs: ['at://handle.test'],
-    });
   });
 
   it('getAdmins should return list of admins', async () => {
@@ -251,10 +236,5 @@ describe('mockApiService', () => {
     await mockApiService.removeAdmin('admin');
     const after = await mockApiService.getAdmins();
     expect(after.data.admins.map((a) => a.username)).not.toContain('admin');
-  });
-
-  it('resolveDid returns a synthesized handle', async () => {
-    const response = await mockApiService.resolveDid('did:plc:xyz');
-    expect(response.data.alsoKnownAs[0]).toBe('at://xyz.bsky.social');
   });
 });
