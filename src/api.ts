@@ -42,6 +42,7 @@ export interface InviteCode {
   createdAt: string;
   uses: {
     usedBy: string;
+    usedByEmail?: string | null;
     usedAt: string;
   }[];
 }
@@ -108,12 +109,6 @@ export const apiService = {
 
   resolveDid: (did: string): Promise<AxiosResponse<{ alsoKnownAs: string[] }>> =>
     axios.get(`https://plc.directory/${did}`),
-
-  getAccountEmail: (did: string): Promise<AxiosResponse<{ email: string | null }>> =>
-    api.get(`/api/account/email`, { params: { did } }),
-
-  getAccountEmails: (dids: string[]): Promise<AxiosResponse<{ emails: Record<string, string | null> }>> =>
-    api.get(`/api/account/emails`, { params: { dids } }),
 };
 
 export const mockApiService = {
@@ -249,19 +244,5 @@ export const mockApiService = {
         alsoKnownAs: [`at://${did.replace('did:plc:', '')}.bsky.social`],
       },
     };
-  },
-
-  getAccountEmail: async (did: string): Promise<{ data: { email: string | null } }> => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return { data: { email: `${did.replace('did:plc:', '')}@example.com` } };
-  },
-
-  getAccountEmails: async (dids: string[]): Promise<{ data: { emails: Record<string, string | null> } }> => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const emails: Record<string, string | null> = {};
-    dids.forEach((did) => {
-      emails[did] = `${did.replace('did:plc:', '')}@example.com`;
-    });
-    return { data: { emails } };
   },
 };
