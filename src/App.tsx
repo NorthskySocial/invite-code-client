@@ -35,7 +35,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 
-const formatDate = (dateString: string | undefined) => {
+export const formatDate = (dateString: string | undefined) => {
   if (!dateString) {
     return '-';
   }
@@ -46,7 +46,7 @@ const formatDate = (dateString: string | undefined) => {
   return dateTimeFormatter.format(date);
 };
 
-const formatDateCsv = (dateString: string | undefined) => {
+export const formatDateCsv = (dateString: string | undefined) => {
   if (!dateString) {
     return '-';
   }

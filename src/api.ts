@@ -2,7 +2,7 @@ import axios, { isAxiosError, AxiosResponse } from 'axios';
 
 export { isAxiosError };
 
-const getBaseURL = () => {
+export const getBaseURL = () => {
   return (
     localStorage.getItem('api_host') ||
     import.meta.env.VITE_API_HOST ||
