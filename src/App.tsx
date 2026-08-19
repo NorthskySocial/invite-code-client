@@ -499,7 +499,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setIsDemoMode(!isDemoMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-transparent focus:ring-blue-500 ${isDemoMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ring-2 ring-offset-2 ring-transparent focus:ring-blue-500 ${isDemoMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
                 role="switch"
                 aria-checked={isDemoMode}
                 aria-label="Demo Mode"
@@ -515,7 +515,7 @@ function App() {
                 <input
                   type="text"
                   placeholder="Backend API Host (e.g. https://api.example.com)"
-                  className="w-full p-3.5 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="w-full p-3.5 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
                   value={apiHost}
                   onChange={(e) => setApiHost(e.target.value)}
                 />
@@ -525,7 +525,7 @@ function App() {
               <input
                 type="text"
                 placeholder="Username"
-                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
@@ -535,7 +535,7 @@ function App() {
               <input
                 type="password"
                 placeholder="Password"
-                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-3.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -562,7 +562,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
       {/* Header */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
+      <nav className="bg-white dark:bg-gray-800 shadow-xs border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -589,14 +589,14 @@ function App() {
           <div className="flex gap-1 md:gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition min-w-[40px] min-h-[40px] flex items-center justify-center"
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-sm transition min-w-[40px] min-h-[40px] flex items-center justify-center"
               title="Toggle Theme"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <button
               onClick={handleLogout}
-              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded min-w-[40px] min-h-[40px] flex items-center justify-center"
+              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-sm min-w-[40px] min-h-[40px] flex items-center justify-center"
               title="Logout"
             >
               <LogOut className="w-5 h-5" />
@@ -608,7 +608,7 @@ function App() {
       <main className="max-w-7xl mx-auto p-4 md:p-6">
         {page === 'Admins' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border dark:border-gray-700 p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -635,7 +635,7 @@ function App() {
                   <input
                     type="text"
                     placeholder="Username to add"
-                    className="w-full p-2.5 pl-9 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full p-2.5 pl-9 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all text-sm"
                     value={newAdminUsername}
                     onChange={(e) => setNewAdminUsername(e.target.value)}
                   />
@@ -655,13 +655,13 @@ function App() {
                     <Check className="w-5 h-5" />
                     Admin created successfully!
                   </div>
-                  <div className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded border border-green-200 dark:border-green-800 w-full justify-between">
+                  <div className="flex items-center gap-3 bg-white dark:bg-gray-700 px-4 py-2 rounded-sm border border-green-200 dark:border-green-800 w-full justify-between">
                     <code className="text-lg font-mono text-gray-800 dark:text-white">
                       {newAdminPassword}
                     </code>
                     <button
                       onClick={() => copyToClipboard(newAdminPassword)}
-                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition"
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-sm transition"
                       title="Copy Password"
                     >
                       {copied === newAdminPassword ? (
@@ -744,20 +744,20 @@ function App() {
         {page === 'Home' && (
           <div className="space-y-6">
             {/* Controls */}
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xs border dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="1"
                   max="100"
-                  className="w-full sm:w-20 p-2.5 sm:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full sm:w-20 p-2.5 sm:p-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-sm"
                   value={inviteCount}
                   onChange={(e) => setInviteCount(parseInt(e.target.value))}
                 />
                 <button
                   onClick={handleCreateInvites}
                   disabled={loading}
-                  className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded flex items-center justify-center gap-2 hover:bg-blue-700 transition font-medium"
+                  className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition font-medium"
                 >
                   <Plus className="w-4 h-4" /> Generate
                 </button>
@@ -769,7 +769,7 @@ function App() {
                   <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value as FilterStatus)}
-                    className="w-full sm:w-auto pl-10 pr-4 py-2.5 sm:py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded appearance-none"
+                    className="w-full sm:w-auto pl-10 pr-4 py-2.5 sm:py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-sm appearance-none"
                   >
                     <option value="All">All Status</option>
                     <option value="Unused">Unused</option>
@@ -781,7 +781,7 @@ function App() {
                 <div className="flex gap-2">
                   <button
                     onClick={downloadCsv}
-                    className="flex-1 sm:flex-none p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 flex items-center justify-center gap-2"
+                    className="flex-1 sm:flex-none p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-sm border dark:border-gray-600 flex items-center justify-center gap-2"
                   >
                     <Download className="w-4 h-4" /> Export CSV
                   </button>
@@ -789,7 +789,7 @@ function App() {
                   <button
                     onClick={fetchInvites}
                     disabled={loading}
-                    className="p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border dark:border-gray-600 min-w-[44px] flex items-center justify-center"
+                    className="p-2.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-sm border dark:border-gray-600 min-w-[44px] flex items-center justify-center"
                   >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -798,13 +798,13 @@ function App() {
             </div>
 
             {error && (
-              <p className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-900/30">
+              <p className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-sm border border-red-200 dark:border-red-900/30">
                 {error}
               </p>
             )}
 
             {/* Desktop Table - Hidden on Mobile */}
-            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-xs border dark:border-gray-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
@@ -908,7 +908,7 @@ function App() {
                             {status === 'Unused' && (
                               <button
                                 onClick={() => handleDisableInvite(invite.code)}
-                                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition"
+                                className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-sm transition"
                                 title="Disable"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -933,7 +933,7 @@ function App() {
                 return (
                   <div
                     key={invite.code}
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700 space-y-3"
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xs border dark:border-gray-700 space-y-3"
                   >
                     <div className="flex justify-between items-center">
                       <div className="font-mono text-lg font-bold dark:text-white flex items-center gap-2">
@@ -1014,7 +1014,7 @@ function App() {
                       <div className="pt-2 border-t dark:border-gray-700">
                         <button
                           onClick={() => handleDisableInvite(invite.code)}
-                          className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded transition border border-red-100 dark:border-red-900/30"
+                          className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded-sm transition border border-red-100 dark:border-red-900/30"
                         >
                           <Trash2 className="w-4 h-4" /> Disable Invite
                         </button>
@@ -1049,7 +1049,7 @@ function App() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder="000000"
-                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-hidden"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
               />
@@ -1091,7 +1091,7 @@ function App() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder="000000"
-                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-4 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-center text-3xl tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-hidden"
                 value={otpToken}
                 onChange={(e) => setOtpToken(e.target.value)}
                 autoFocus
