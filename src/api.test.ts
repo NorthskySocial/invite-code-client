@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { apiService, api, updateApiBaseURL, getBaseURL } from './api';
+import { apiService, api, updateApiBaseURL, getBaseURL, mockApiService } from './api';
 
 const handlers = [
   http.post('https://frontend.myapp.local/api/auth/login', async ({ request }) => {
@@ -216,5 +216,45 @@ describe('base URL resolution', () => {
     } finally {
       api.defaults.baseURL = original;
     }
+  });
+});
+
+describe('mockApiService', () => {
+  it('login returns a demo token for a regular user', async () => {
+    const response = await mockApiService.login('demo-user', 'pw');
+    expect(response.data.token).toBe('mock-token');
+    expect(response.data.username).toBe('demo-user');
+  });
+
+  it('login returns OTP setup fields for a new user', async () => {
+    const response = await mockApiService.login('new-user', 'pw');
+    expect(response.data.otp_enabled).toBe(false);
+    expect(response.data.otp_auth_url).toContain('otpauth://');
+  });
+
+  it('getInviteCodes returns the demo fixtures', async () => {
+    const response = await mockApiService.getInviteCodes();
+    expect(response.data.codes).toHaveLength(3);
+    expect(response.data.codes.map((c) => c.code)).toContain('DEMO-123');
+  });
+
+  it('addAdmin persists the new admin and returns a password', async () => {
+    const response = await mockApiService.addAdmin('grace');
+    expect(response.data.status).toBe('success');
+    expect(response.data.password).toContain('mock-generated-password-');
+
+    const after = await mockApiService.getAdmins();
+    expect(after.data.admins.map((a) => a.username)).toContain('grace');
+  });
+
+  it('removeAdmin drops the admin from the persisted list', async () => {
+    await mockApiService.removeAdmin('admin');
+    const after = await mockApiService.getAdmins();
+    expect(after.data.admins.map((a) => a.username)).not.toContain('admin');
+  });
+
+  it('resolveDid returns a synthesized handle', async () => {
+    const response = await mockApiService.resolveDid('did:plc:xyz');
+    expect(response.data.alsoKnownAs[0]).toBe('at://xyz.bsky.social');
   });
 });
