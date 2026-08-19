@@ -498,7 +498,9 @@ describe('CSV export', () => {
       reader.onload = () => resolve(reader.result as string);
       reader.readAsText(capturedBlob!);
     });
-    expect(text).toContain('Invite Code,Status,Created At,Used By,Account Status,Email,Used At');
+    expect(text).toContain(
+      'Invite Code,Status,Created At,Used By,PDS Account Status,Email,Used At'
+    );
     expect(text).toContain('UNUSED-CODE');
     expect(text).toContain('USED-CODE');
 
