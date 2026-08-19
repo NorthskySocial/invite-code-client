@@ -789,28 +789,28 @@ function App() {
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Invite Code
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Created At
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Used By
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Email
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         DID
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Used At
                       </th>
-                      <th className="px-6 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right">
+                      <th className="px-3 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider text-right whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
@@ -827,7 +827,7 @@ function App() {
                           key={invite.code}
                           className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
                         >
-                          <td className="px-6 py-4 font-mono text-sm flex items-center gap-2 dark:text-gray-200">
+                          <td className="px-3 py-4 font-mono text-xs flex items-center gap-1 whitespace-nowrap dark:text-gray-200">
                             {invite.code}
                             <button
                               onClick={() => copyToClipboard(invite.code)}
@@ -840,7 +840,7 @@ function App() {
                               )}
                             </button>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 py-4">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 status === 'Unused'
@@ -853,10 +853,10 @@ function App() {
                               {status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {formatDate(invite.createdAt)}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center gap-2">
                               {resolvedHandle ? (
                                 <a
@@ -883,22 +883,25 @@ function App() {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-[14rem] truncate">
                             {invite.uses?.[0]?.usedByEmail || '-'}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {usedBy ? (
-                              <span className="font-mono text-xs" title={usedBy}>
+                              <span
+                                className="font-mono text-xs block max-w-[12rem] truncate"
+                                title={usedBy}
+                              >
                                 {usedBy}
                               </span>
                             ) : (
                               '-'
                             )}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {formatDate(usedAt)}
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-3 py-4 text-right">
                             {status === 'Unused' && (
                               <button
                                 onClick={() => handleDisableInvite(invite.code)}
