@@ -67,7 +67,6 @@ function App() {
   );
   const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
   const activeService = isDemoMode ? mockApiService : apiService;
-  const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [otpToken, setOtpToken] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
@@ -111,7 +110,6 @@ function App() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
-    setTwoFactorToken(null);
     setQrCode(null);
     setOtpToken('');
     setError(null);
@@ -244,7 +242,6 @@ function App() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setTwoFactorToken(null);
     setOtpToken('');
     setQrCode(null);
 
@@ -263,7 +260,6 @@ function App() {
     try {
       const response = await activeService.login(username, password);
       if (response.data.otp_enabled && response.data.otp_verified && !response.data.token) {
-        setTwoFactorToken(response.data.two_factor_token || null);
         setPage('QrValidate');
         return;
       }
