@@ -541,7 +541,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
       {/* Header */}
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7" />
@@ -583,7 +583,7 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-4 md:p-6">
+      <main className="max-w-7xl mx-auto p-4 md:p-6">
         {page === 'Admins' && (
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
