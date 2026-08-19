@@ -13,7 +13,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'axios', 'date-fns', 'lucide-react'],
+          vendor: ['react', 'react-dom', 'axios', 'lucide-react'],
         },
       },
     },

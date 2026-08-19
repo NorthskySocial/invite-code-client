@@ -26,17 +26,36 @@ import {
   UserPlus,
   UserMinus,
 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) {
     return '-';
   }
   const date = new Date(dateString);
-  if (!isValid(date)) {
+  if (isNaN(date.getTime())) {
     return 'Invalid Date';
   }
-  return format(date, 'MMM d, yyyy HH:mm');
+  return dateTimeFormatter.format(date);
+};
+
+const formatDateCsv = (dateString: string | undefined) => {
+  if (!dateString) {
+    return '-';
+  }
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate' | 'Admins';
@@ -396,10 +415,10 @@ function App() {
       return [
         invite.code,
         getStatus(invite),
-        formatDate(invite.createdAt),
+        formatDateCsv(invite.createdAt),
         usedByText,
         emailText,
-        formatDate(getUsedAt(invite)),
+        formatDateCsv(getUsedAt(invite)),
       ]
         .map((val) => `"${String(val).replace(/"/g, '""')}"`)
         .join(',');
@@ -410,7 +429,10 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `invites_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    a.download = `invites_${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
