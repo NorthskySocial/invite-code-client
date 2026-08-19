@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { apiService } from './api';
+import { apiService, api, updateApiBaseURL, getBaseURL } from './api';
 
 const handlers = [
   http.post('https://frontend.myapp.local/api/auth/login', async ({ request }) => {
@@ -65,6 +65,25 @@ const handlers = [
       alsoKnownAs: [`at://handle.test`],
     });
   }),
+
+  http.get('https://frontend.myapp.local/api/admins', () => {
+    return HttpResponse.json({
+      admins: [{ username: 'admin', createdAt: '2026-01-25T08:02:05.614Z' }],
+    });
+  }),
+
+  http.post('https://frontend.myapp.local/api/admins', async ({ request }) => {
+    const { username } = (await request.json()) as { username: string };
+    return HttpResponse.json({
+      status: 'success',
+      message: 'Admin user created successfully',
+      password: `pw-for-${username}`,
+    });
+  }),
+
+  http.delete('https://frontend.myapp.local/api/admins/:username', () => {
+    return HttpResponse.json({ success: true });
+  }),
 ];
 
 const server = setupServer(...handlers);
@@ -124,5 +143,78 @@ describe('apiService', () => {
       id: 'did:plc:123',
       alsoKnownAs: ['at://handle.test'],
     });
+  });
+
+  it('getAdmins should return list of admins', async () => {
+    const response = await apiService.getAdmins();
+    expect(response.data.admins).toHaveLength(1);
+    expect(response.data.admins[0].username).toBe('admin');
+  });
+
+  it('addAdmin should send the username and return a generated password', async () => {
+    const response = await apiService.addAdmin('newadmin');
+    expect(response.data.status).toBe('success');
+    expect(response.data.password).toBe('pw-for-newadmin');
+  });
+
+  it('removeAdmin should target the username in the URL', async () => {
+    let requestedUrl = '';
+    server.use(
+      http.delete('https://frontend.myapp.local/api/admins/:username', ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json({ success: true });
+      })
+    );
+    const response = await apiService.removeAdmin('gone');
+    expect(response.data).toEqual({ success: true });
+    expect(requestedUrl).toContain('/api/admins/gone');
+  });
+});
+
+describe('auth token interceptor', () => {
+  it('adds an Authorization header when a token is stored', async () => {
+    localStorage.setItem('token', 'abc123');
+    let authHeader: string | null = null;
+    server.use(
+      http.get('https://frontend.myapp.local/api/invite-codes', ({ request }) => {
+        authHeader = request.headers.get('Authorization');
+        return HttpResponse.json({ codes: [] });
+      })
+    );
+    await apiService.getInviteCodes();
+    expect(authHeader).toBe('Bearer abc123');
+  });
+
+  it('omits the Authorization header when no token is stored', async () => {
+    let authHeader: string | null = 'unset';
+    server.use(
+      http.get('https://frontend.myapp.local/api/invite-codes', ({ request }) => {
+        authHeader = request.headers.get('Authorization');
+        return HttpResponse.json({ codes: [] });
+      })
+    );
+    await apiService.getInviteCodes();
+    expect(authHeader).toBeNull();
+  });
+});
+
+describe('base URL resolution', () => {
+  it('getBaseURL falls back to the default host when nothing is configured', () => {
+    expect(getBaseURL()).toBe('https://frontend.myapp.local/');
+  });
+
+  it('getBaseURL prefers the stored api_host', () => {
+    localStorage.setItem('api_host', 'https://custom.example.com/');
+    expect(getBaseURL()).toBe('https://custom.example.com/');
+  });
+
+  it('updateApiBaseURL changes the axios default base URL', () => {
+    const original = api.defaults.baseURL;
+    try {
+      updateApiBaseURL('https://changed.example.com/');
+      expect(api.defaults.baseURL).toBe('https://changed.example.com/');
+    } finally {
+      api.defaults.baseURL = original;
+    }
   });
 });
