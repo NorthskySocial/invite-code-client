@@ -901,14 +901,9 @@ function App() {
                           <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-[14rem] truncate">
                             {invite.uses?.[0]?.usedByEmail || '-'}
                           </td>
-                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {usedBy ? (
-                              <span
-                                className="font-mono text-xs block max-w-[12rem] truncate"
-                                title={usedBy}
-                              >
-                                {usedBy}
-                              </span>
+                              <span className="font-mono text-xs">{usedBy}</span>
                             ) : (
                               '-'
                             )}
@@ -1029,7 +1024,7 @@ function App() {
                         <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           DID
                         </p>
-                        <p className="dark:text-gray-300 font-mono text-xs truncate" title={usedBy}>
+                        <p className="dark:text-gray-300 font-mono text-xs break-all">
                           {usedBy || '-'}
                         </p>
                       </div>
