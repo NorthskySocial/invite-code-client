@@ -58,12 +58,10 @@ export interface AdminsResponse {
 
 export interface LoginResponse {
   token?: string;
-  requires_2fa?: boolean;
   two_factor_token?: string;
   username?: string;
   otp_enabled?: boolean;
   otp_verified?: boolean;
-  otp_base32?: string;
   otp_auth_url?: string;
 }
 

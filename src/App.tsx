@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   apiService,
   mockApiService,
@@ -26,17 +26,36 @@ import {
   UserPlus,
   UserMinus,
 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) {
     return '-';
   }
   const date = new Date(dateString);
-  if (!isValid(date)) {
+  if (isNaN(date.getTime())) {
     return 'Invalid Date';
   }
-  return format(date, 'MMM d, yyyy HH:mm');
+  return dateTimeFormatter.format(date);
+};
+
+const formatDateCsv = (dateString: string | undefined) => {
+  if (!dateString) {
+    return '-';
+  }
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 type Page = 'Home' | 'Login' | 'QrVerify' | 'QrValidate' | 'Admins';
@@ -67,12 +86,15 @@ function App() {
   );
   const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
   const activeService = isDemoMode ? mockApiService : apiService;
-  const [_twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [otpToken, setOtpToken] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
+  const handlesRef = useRef(handles);
+  useEffect(() => {
+    handlesRef.current = handles;
+  }, [handles]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
@@ -111,7 +133,6 @@ function App() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
-    setTwoFactorToken(null);
     setQrCode(null);
     setOtpToken('');
     setError(null);
@@ -124,33 +145,32 @@ function App() {
 
       invitesList.forEach((invite) => {
         const usedBy = getUsedBy(invite);
-        if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
+        if (usedBy && usedBy.startsWith('did:') && !handlesRef.current[usedBy]) {
           didsToResolve.add(usedBy);
         }
       });
 
       // Resolve handles individually (PLC directory doesn't seem to have a batch API)
+      const resolved: Record<string, string> = {};
       for (const did of didsToResolve) {
         try {
           const response = await activeService.resolveDid(did);
           // PLC directory response has 'alsoKnownAs' array with 'at://handle'
           const alsoKnownAs = response.data?.alsoKnownAs || [];
           const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
-          if (handleUri) {
-            const handle = handleUri.replace('at://', '');
-            setHandles((prev) => ({ ...prev, [did]: handle }));
-          } else {
-            // If no handle found, we might want to store the DID itself or a placeholder
-            setHandles((prev) => ({ ...prev, [did]: did }));
-          }
+          resolved[did] = handleUri ? handleUri.replace('at://', '') : did;
         } catch (err) {
           console.error(`Failed to resolve DID handle for DID: ${did}`, err);
-          // Optionally store the DID so we don't keep trying
-          setHandles((prev) => ({ ...prev, [did]: did }));
+          // Store the DID so we don't keep trying
+          resolved[did] = did;
         }
       }
+
+      if (Object.keys(resolved).length > 0) {
+        setHandles((prev) => ({ ...prev, ...resolved }));
+      }
     },
-    [activeService, handles]
+    [activeService]
   );
 
   const fetchInvites = useCallback(async () => {
@@ -244,7 +264,6 @@ function App() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setTwoFactorToken(null);
     setOtpToken('');
     setQrCode(null);
 
@@ -263,7 +282,6 @@ function App() {
     try {
       const response = await activeService.login(username, password);
       if (response.data.otp_enabled && response.data.otp_verified && !response.data.token) {
-        setTwoFactorToken(response.data.two_factor_token || null);
         setPage('QrValidate');
         return;
       }
@@ -397,10 +415,10 @@ function App() {
       return [
         invite.code,
         getStatus(invite),
-        formatDate(invite.createdAt),
+        formatDateCsv(invite.createdAt),
         usedByText,
         emailText,
-        formatDate(getUsedAt(invite)),
+        formatDateCsv(getUsedAt(invite)),
       ]
         .map((val) => `"${String(val).replace(/"/g, '""')}"`)
         .join(',');
@@ -411,7 +429,10 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `invites_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    a.download = `invites_${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -542,7 +563,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
       {/* Header */}
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-blue-600 w-6 h-6 md:w-7 md:h-7" />
@@ -584,7 +605,7 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-4 md:p-6">
+      <main className="max-w-7xl mx-auto p-4 md:p-6">
         {page === 'Admins' && (
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6">
