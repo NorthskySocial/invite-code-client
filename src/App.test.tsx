@@ -361,7 +361,6 @@ describe('admins page', () => {
 
 describe('OTP verification and validation', () => {
   it('verifies an OTP setup token and lands on Home', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
         HttpResponse.json({
@@ -382,11 +381,10 @@ describe('OTP verification and validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
 
     await waitFor(() => expect(localStorage.getItem('token')).toBe('otp-token'));
-    alertSpy.mockRestore();
+    expect(await screen.findByText('OTP verified successfully')).toBeInTheDocument();
   });
 
   it('validates a 2FA token and lands on Home', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
         HttpResponse.json({ otp_enabled: true, otp_verified: true })
@@ -403,7 +401,7 @@ describe('OTP verification and validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
 
     await waitFor(() => expect(localStorage.getItem('token')).toBe('otp-token'));
-    alertSpy.mockRestore();
+    expect(await screen.findByText('OTP validated successfully')).toBeInTheDocument();
   });
 });
 
