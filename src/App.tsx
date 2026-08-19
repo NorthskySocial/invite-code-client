@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   apiService,
   mockApiService,
@@ -72,6 +72,10 @@ function App() {
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
+  const handlesRef = useRef(handles);
+  useEffect(() => {
+    handlesRef.current = handles;
+  }, [handles]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
@@ -122,33 +126,32 @@ function App() {
 
       invitesList.forEach((invite) => {
         const usedBy = getUsedBy(invite);
-        if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
+        if (usedBy && usedBy.startsWith('did:') && !handlesRef.current[usedBy]) {
           didsToResolve.add(usedBy);
         }
       });
 
       // Resolve handles individually (PLC directory doesn't seem to have a batch API)
+      const resolved: Record<string, string> = {};
       for (const did of didsToResolve) {
         try {
           const response = await activeService.resolveDid(did);
           // PLC directory response has 'alsoKnownAs' array with 'at://handle'
           const alsoKnownAs = response.data?.alsoKnownAs || [];
           const handleUri = alsoKnownAs.find((uri: string) => uri.startsWith('at://'));
-          if (handleUri) {
-            const handle = handleUri.replace('at://', '');
-            setHandles((prev) => ({ ...prev, [did]: handle }));
-          } else {
-            // If no handle found, we might want to store the DID itself or a placeholder
-            setHandles((prev) => ({ ...prev, [did]: did }));
-          }
+          resolved[did] = handleUri ? handleUri.replace('at://', '') : did;
         } catch (err) {
           console.error(`Failed to resolve DID handle for DID: ${did}`, err);
-          // Optionally store the DID so we don't keep trying
-          setHandles((prev) => ({ ...prev, [did]: did }));
+          // Store the DID so we don't keep trying
+          resolved[did] = did;
         }
       }
+
+      if (Object.keys(resolved).length > 0) {
+        setHandles((prev) => ({ ...prev, ...resolved }));
+      }
     },
-    [activeService, handles]
+    [activeService]
   );
 
   const fetchInvites = useCallback(async () => {
