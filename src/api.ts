@@ -44,6 +44,7 @@ export interface InviteCode {
     usedBy: string;
     usedByEmail?: string | null;
     usedAt: string;
+    usedByDeactivated?: boolean;
   }[];
 }
 
@@ -145,7 +146,28 @@ export const mockApiService = {
         forAccount: 'demo-user',
         createdBy: 'admin',
         createdAt: new Date(Date.now() - 86400000).toISOString(),
-        uses: [{ usedBy: 'did:plc:mockuser', usedAt: new Date().toISOString() }],
+        uses: [
+          {
+            usedBy: 'did:plc:mockuser',
+            usedAt: new Date().toISOString(),
+            usedByDeactivated: false,
+          },
+        ],
+      },
+      {
+        code: 'GONE-321',
+        available: 0,
+        disabled: false,
+        forAccount: 'demo-user',
+        createdBy: 'admin',
+        createdAt: new Date(Date.now() - 259200000).toISOString(),
+        uses: [
+          {
+            usedBy: 'did:plc:mockgone',
+            usedAt: new Date(Date.now() - 172800000).toISOString(),
+            usedByDeactivated: true,
+          },
+        ],
       },
       {
         code: 'DISABLED-789',

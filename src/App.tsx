@@ -123,6 +123,15 @@ function App() {
     return undefined;
   };
 
+  // Returns null when the API does not report the flag for this invite.
+  const getAccountStatus = (invite: InviteCode): 'Active' | 'Deactivated' | null => {
+    const deactivated = invite.uses?.[0]?.usedByDeactivated;
+    if (deactivated === undefined) {
+      return null;
+    }
+    return deactivated ? 'Deactivated' : 'Active';
+  };
+
   const filteredInvites = useMemo(() => {
     if (filter === 'All') {
       return invites;
@@ -405,7 +414,15 @@ function App() {
   };
 
   const downloadCsv = () => {
-    const headers = ['Invite Code', 'Status', 'Created At', 'Used By', 'Email', 'Used At'];
+    const headers = [
+      'Invite Code',
+      'Status',
+      'Created At',
+      'Used By',
+      'PDS Account Status',
+      'Email',
+      'Used At',
+    ];
     const rows = filteredInvites.map((invite) => {
       const usedBy = getUsedBy(invite);
       const resolvedHandle = usedBy ? handles[usedBy] : null;
@@ -417,6 +434,7 @@ function App() {
         getStatus(invite),
         formatDateCsv(invite.createdAt),
         usedByText,
+        getAccountStatus(invite) || '-',
         emailText,
         formatDateCsv(getUsedAt(invite)),
       ]
@@ -841,6 +859,7 @@ function App() {
                       const usedAt = getUsedAt(invite);
                       const usedBy = getUsedBy(invite);
                       const resolvedHandle = usedBy ? handles[usedBy] : null;
+                      const accountStatus = getAccountStatus(invite);
                       return (
                         <tr
                           key={invite.code}
@@ -876,18 +895,31 @@ function App() {
                             {formatDate(invite.createdAt)}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                            {resolvedHandle ? (
-                              <a
-                                href={`https://bsky.app/profile/${resolvedHandle}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                              >
-                                {resolvedHandle}
-                              </a>
-                            ) : (
-                              '-'
-                            )}
+                            <div className="flex items-center gap-2">
+                              {resolvedHandle ? (
+                                <a
+                                  href={`https://bsky.app/profile/${resolvedHandle}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {resolvedHandle}
+                                </a>
+                              ) : (
+                                '-'
+                              )}
+                              {accountStatus && (
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    accountStatus === 'Deactivated'
+                                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  }`}
+                                >
+                                  {accountStatus}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {invite.uses?.[0]?.usedByEmail || '-'}
@@ -930,6 +962,7 @@ function App() {
                 const usedAt = getUsedAt(invite);
                 const usedBy = getUsedBy(invite);
                 const resolvedHandle = usedBy ? handles[usedBy] : null;
+                const accountStatus = getAccountStatus(invite);
                 return (
                   <div
                     key={invite.code}
@@ -998,6 +1031,17 @@ function App() {
                             </a>
                           ) : (
                             '-'
+                          )}
+                          {accountStatus && (
+                            <span
+                              className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                accountStatus === 'Deactivated'
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              }`}
+                            >
+                              {accountStatus}
+                            </span>
                           )}
                         </p>
                       </div>

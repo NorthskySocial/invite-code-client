@@ -234,7 +234,7 @@ describe('mockApiService', () => {
 
   it('getInviteCodes returns the demo fixtures', async () => {
     const response = await mockApiService.getInviteCodes();
-    expect(response.data.codes).toHaveLength(3);
+    expect(response.data.codes).toHaveLength(4);
     expect(response.data.codes.map((c) => c.code)).toContain('DEMO-123');
   });
 
