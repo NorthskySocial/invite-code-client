@@ -402,6 +402,27 @@ describe('OTP verification and validation', () => {
 
     await waitFor(() => expect(localStorage.getItem('token')).toBe('otp-token'));
     expect(await screen.findByText('OTP validated successfully')).toBeInTheDocument();
+    await expectCodeVisible('UNUSED-CODE');
+  });
+
+  it('loads invites after 2FA even when no token is returned', async () => {
+    server.use(
+      http.post(`${API_HOST}/api/auth/login`, () =>
+        HttpResponse.json({ otp_enabled: true, otp_verified: true })
+      ),
+      http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({}))
+    );
+
+    render(<App />);
+    fillLogin('twofa');
+    await waitFor(() =>
+      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
+    await expectCodeVisible('UNUSED-CODE');
   });
 });
 
@@ -438,7 +459,7 @@ describe('used-by handle', () => {
     expect(link).toHaveAttribute('href', 'https://bsky.app/profile/alice.bsky.social');
   });
 
-  it('falls back to a dash when the API returns no handle', async () => {
+  it('falls back to the DID when the API returns no handle', async () => {
     const noHandle = [
       { ...didInvites[0], uses: [{ usedBy: 'did:plc:abc', usedAt: '2026-01-25T08:12:55.280Z' }] },
     ];
@@ -450,6 +471,8 @@ describe('used-by handle', () => {
 
     await expectCodeVisible('DID-CODE');
     expect(screen.queryByRole('link', { name: 'alice.bsky.social' })).not.toBeInTheDocument();
+    const link = screen.getAllByRole('link', { name: 'did:plc:abc' })[0];
+    expect(link).toHaveAttribute('href', 'https://bsky.app/profile/did:plc:abc');
   });
 });
 
