@@ -77,6 +77,7 @@ function App() {
   const [filter, setFilter] = useState<FilterStatus>('All');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [apiHost, setApiHost] = useState(
@@ -330,7 +331,7 @@ function App() {
         localStorage.setItem('token', token);
         setToken(token);
       }
-      alert('OTP Verified successfully');
+      setNotice('OTP verified successfully');
       setPage('Home');
     } catch (err: unknown) {
       setError(
@@ -352,12 +353,9 @@ function App() {
       if (token) {
         localStorage.setItem('token', token);
         setToken(token);
-        alert('OTP Validated successfully');
-        setPage('Home');
-      } else {
-        alert('OTP Validated successfully');
-        setPage('Home');
       }
+      setNotice('OTP validated successfully');
+      setPage('Home');
     } catch (err: unknown) {
       setError(
         isAxiosError(err)
@@ -436,6 +434,14 @@ function App() {
       cancelled = true;
     };
   }, [token, isAdminPage, fetchInvites, fetchAdmins]);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     if (darkMode) {
@@ -541,6 +547,16 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full transition-colors duration-200">
+      {notice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 right-4 z-20 flex items-center gap-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-900/40 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg shadow-lg"
+        >
+          <Check className="w-5 h-5" />
+          <span className="text-sm font-medium">{notice}</span>
+        </div>
+      )}
       {/* Header */}
       <nav className="bg-white dark:bg-gray-800 shadow-xs border-b dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
