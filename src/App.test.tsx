@@ -38,8 +38,7 @@ const invites = [
 
 const server = setupServer(
   http.get(`${API_HOST}/api/invite-codes`, () => HttpResponse.json({ codes: invites })),
-  http.get(`${API_HOST}/api/admins`, () => HttpResponse.json({ admins: [] })),
-  http.get(`${API_HOST}/api/account/emails`, () => HttpResponse.json({ emails: {} }))
+  http.get(`${API_HOST}/api/admins`, () => HttpResponse.json({ admins: [] }))
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

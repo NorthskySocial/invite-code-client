@@ -73,7 +73,6 @@ function App() {
   const [inviteCount, setInviteCount] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
-  const [emails, setEmails] = useState<Record<string, string>>({});
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState<string | null>(null);
@@ -122,47 +121,15 @@ function App() {
   const resolveHandles = useCallback(
     async (invitesList: InviteCode[]) => {
       const didsToResolve = new Set<string>();
-      const emailsToResolve = new Set<string>();
 
       invitesList.forEach((invite) => {
         const usedBy = getUsedBy(invite);
-        if (usedBy && usedBy.startsWith('did:')) {
-          if (!handles[usedBy]) {
-            didsToResolve.add(usedBy);
-          }
-          if (!emails[usedBy]) {
-            emailsToResolve.add(usedBy);
-          }
+        if (usedBy && usedBy.startsWith('did:') && !handles[usedBy]) {
+          didsToResolve.add(usedBy);
         }
       });
 
-      // Resolve emails in batch first
-      if (emailsToResolve.size > 0) {
-        try {
-          const emailResponse = await activeService.getAccountEmails(Array.from(emailsToResolve));
-          const resolvedEmails = emailResponse.data?.emails || {};
-
-          setEmails((prev) => {
-            const next = { ...prev };
-            emailsToResolve.forEach((did) => {
-              next[did] = resolvedEmails[did] || '-';
-            });
-            return next;
-          });
-        } catch (err) {
-          console.error('Failed to resolve emails in batch', err);
-          // Fallback: mark as unresolved so we don't keep trying
-          setEmails((prev) => {
-            const next = { ...prev };
-            emailsToResolve.forEach((did) => {
-              next[did] = '-';
-            });
-            return next;
-          });
-        }
-      }
-
-      // Then resolve handles individually (PLC directory doesn't seem to have a batch API)
+      // Resolve handles individually (PLC directory doesn't seem to have a batch API)
       for (const did of didsToResolve) {
         try {
           const response = await activeService.resolveDid(did);
@@ -183,7 +150,7 @@ function App() {
         }
       }
     },
-    [activeService, handles, emails]
+    [activeService, handles]
   );
 
   const fetchInvites = useCallback(async () => {
@@ -425,7 +392,7 @@ function App() {
       const usedBy = getUsedBy(invite);
       const resolvedHandle = usedBy ? handles[usedBy] : null;
       const usedByText = resolvedHandle || usedBy || '-';
-      const emailText = (usedBy && emails[usedBy]) || '-';
+      const emailText = invite.uses?.[0]?.usedByEmail || '-';
 
       return [
         invite.code,
@@ -902,7 +869,7 @@ function App() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                            {usedBy && emails[usedBy] ? emails[usedBy] : '-'}
+                            {invite.uses?.[0]?.usedByEmail || '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {usedBy ? (
@@ -991,7 +958,7 @@ function App() {
                           Email
                         </p>
                         <p className="dark:text-gray-300 truncate">
-                          {usedBy && emails[usedBy] ? emails[usedBy] : '-'}
+                          {invite.uses?.[0]?.usedByEmail || '-'}
                         </p>
                       </div>
                       <div className="col-span-2">
