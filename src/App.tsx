@@ -415,9 +415,8 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const isAdminPage = page === 'Admins';
   useEffect(() => {
-    if (!token) {
+    if (page !== 'Home' && page !== 'Admins') {
       return;
     }
     let cancelled = false;
@@ -433,7 +432,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [token, isAdminPage, fetchInvites, fetchAdmins]);
+  }, [page, fetchInvites, fetchAdmins]);
 
   useEffect(() => {
     if (!notice) {
@@ -836,7 +835,7 @@ function App() {
                       const status = getStatus(invite);
                       const usedAt = getUsedAt(invite);
                       const usedBy = getUsedBy(invite);
-                      const resolvedHandle = getUsedByHandle(invite);
+                      const usedByLabel = getUsedByHandle(invite) || usedBy;
                       const accountStatus = getAccountStatus(invite);
                       return (
                         <tr
@@ -874,14 +873,14 @@ function App() {
                           </td>
                           <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center gap-2">
-                              {resolvedHandle ? (
+                              {usedByLabel ? (
                                 <a
-                                  href={`https://bsky.app/profile/${resolvedHandle}`}
+                                  href={`https://bsky.app/profile/${usedByLabel}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-600 hover:underline"
                                 >
-                                  {resolvedHandle}
+                                  {usedByLabel}
                                 </a>
                               ) : (
                                 '-'
@@ -902,14 +901,9 @@ function App() {
                           <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-[14rem] truncate">
                             {invite.uses?.[0]?.usedByEmail || '-'}
                           </td>
-                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {usedBy ? (
-                              <span
-                                className="font-mono text-xs block max-w-[12rem] truncate"
-                                title={usedBy}
-                              >
-                                {usedBy}
-                              </span>
+                              <span className="font-mono text-xs">{usedBy}</span>
                             ) : (
                               '-'
                             )}
@@ -942,7 +936,7 @@ function App() {
                 const status = getStatus(invite);
                 const usedAt = getUsedAt(invite);
                 const usedBy = getUsedBy(invite);
-                const resolvedHandle = getUsedByHandle(invite);
+                const usedByLabel = getUsedByHandle(invite) || usedBy;
                 const accountStatus = getAccountStatus(invite);
                 return (
                   <div
@@ -1001,14 +995,14 @@ function App() {
                           Used By
                         </p>
                         <p className="dark:text-gray-300 truncate">
-                          {resolvedHandle ? (
+                          {usedByLabel ? (
                             <a
-                              href={`https://bsky.app/profile/${resolvedHandle}`}
+                              href={`https://bsky.app/profile/${usedByLabel}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline"
                             >
-                              {resolvedHandle}
+                              {usedByLabel}
                             </a>
                           ) : (
                             '-'
@@ -1030,7 +1024,7 @@ function App() {
                         <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-semibold">
                           DID
                         </p>
-                        <p className="dark:text-gray-300 font-mono text-xs truncate" title={usedBy}>
+                        <p className="dark:text-gray-300 font-mono text-xs break-all">
                           {usedBy || '-'}
                         </p>
                       </div>
