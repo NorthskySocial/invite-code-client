@@ -9,6 +9,15 @@ const execArgv = process.allowedNodeEnvironmentFlags.has('--no-experimental-webs
 export default defineConfig({
   plugins: [react()],
   base: './',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'axios', 'date-fns', 'lucide-react'],
+        },
+      },
+    },
+  },
   server: {
     host: 'localhost',
     allowedHosts: ['frontend.myapp.local'],
