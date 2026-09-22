@@ -27,22 +27,6 @@ npm run dev
 npm run build
 ```
 
-### Desktop Executable
-
-To generate a local executable for your current platform:
-
-```bash
-npm run electron:build
-```
-
-The executable will be located in the `release` directory.
-
-To run the application in desktop mode for development:
-
-```bash
-npm run electron:dev
-```
-
 ### Local HTTPS Development
 
 This project supports local HTTPS development using [Caddy](https://caddyserver.com/).
