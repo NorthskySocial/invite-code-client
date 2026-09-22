@@ -57,17 +57,6 @@ export default ts.config(
     },
   },
   {
-    files: ['electron/**/*.js', 'electron/**/*.cjs'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-require-imports': 'off',
-    },
-  },
-  {
     ignores: ['dist', 'release', 'node_modules', '.github', '*.config.js', '*.config.ts', 'assets'],
   },
   prettierConfig

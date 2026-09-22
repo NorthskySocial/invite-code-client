@@ -3,38 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "description": "Client for Invite Code system",
-  "author": "North Sky",
-  "main": "electron/main.js",
+  "author": "Northsky",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
     "test": "vitest",
     "lint": "eslint .",
     "format": "prettier --write ."
-  },
-  "build": {
-    "appId": "com.northsky.invitecodeclient",
-    "productName": "InviteCodeClient",
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "mac": {
-      "category": "public.app-category.utilities"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "linux": {
-      "target": "AppImage"
-    }
   },
   "dependencies": {
     "axios": "1.19.0",
@@ -54,8 +31,6 @@
     "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-react": "^6.0.5",
     "concurrently": "^10.0.5",
-    "electron": "^43.4.1",
-    "electron-builder": "^26.4.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
