@@ -44,7 +44,7 @@ const server = setupServer(
   http.post(`${API_HOST}/api/admins`, () =>
     HttpResponse.json({ status: 'success', message: 'ok', password: 'generated-pass' })
   ),
-  http.delete(`${API_HOST}/api/admins/:username`, () => HttpResponse.json({ success: true })),
+  http.delete(`${API_HOST}/api/admins`, () => HttpResponse.json({ success: true })),
   http.post(`${API_HOST}/api/auth/otp/verify`, () => HttpResponse.json({ token: 'otp-token' })),
   http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({ token: 'otp-token' }))
 );
@@ -299,8 +299,9 @@ describe('admins page', () => {
           admins: [{ username: 'carol', createdAt: '2026-01-25T08:02:05.614Z' }],
         })
       ),
-      http.delete(`${API_HOST}/api/admins/:username`, ({ params }) => {
-        deleted = params.username as string;
+      http.delete(`${API_HOST}/api/admins`, async ({ request }) => {
+        const body = (await request.json()) as { username: string };
+        deleted = body.username;
         return HttpResponse.json({ success: true });
       })
     );
@@ -323,7 +324,7 @@ describe('admins page', () => {
           admins: [{ username: 'carol', createdAt: '2026-01-25T08:02:05.614Z' }],
         })
       ),
-      http.delete(`${API_HOST}/api/admins/:username`, () => {
+      http.delete(`${API_HOST}/api/admins`, () => {
         deleteCalled = true;
         return HttpResponse.json({ success: true });
       })

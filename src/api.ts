@@ -105,7 +105,7 @@ export const apiService = {
     api.post<AddAdminResponse>('/api/admins', { username }),
 
   removeAdmin: (username: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.delete(`/api/admins/${username}`),
+    api.delete('/api/admins', { data: { username } }),
 };
 
 export const mockApiService = {

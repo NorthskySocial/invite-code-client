@@ -74,7 +74,7 @@ const handlers = [
     });
   }),
 
-  http.delete('https://frontend.myapp.local/api/admins/:username', () => {
+  http.delete('https://frontend.myapp.local/api/admins', () => {
     return HttpResponse.json({ success: true });
   }),
 ];
@@ -142,17 +142,20 @@ describe('apiService', () => {
     expect(response.data.password).toBe('pw-for-newadmin');
   });
 
-  it('removeAdmin should target the username in the URL', async () => {
+  it('removeAdmin should send the username in the request body', async () => {
     let requestedUrl = '';
+    let requestedBody: { username?: string } = {};
     server.use(
-      http.delete('https://frontend.myapp.local/api/admins/:username', ({ request }) => {
+      http.delete('https://frontend.myapp.local/api/admins', async ({ request }) => {
         requestedUrl = request.url;
+        requestedBody = (await request.json()) as { username?: string };
         return HttpResponse.json({ success: true });
       })
     );
     const response = await apiService.removeAdmin('gone');
     expect(response.data).toEqual({ success: true });
-    expect(requestedUrl).toContain('/api/admins/gone');
+    expect(requestedUrl).toBe('https://frontend.myapp.local/api/admins');
+    expect(requestedBody).toEqual({ username: 'gone' });
   });
 });
 
