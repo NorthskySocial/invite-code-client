@@ -2,13 +2,10 @@ import axios, { isAxiosError, AxiosResponse } from 'axios';
 
 export { isAxiosError };
 
-export const getBaseURL = () => {
-  return (
-    localStorage.getItem('api_host') ||
-    import.meta.env.VITE_API_HOST ||
-    'https://frontend.myapp.local/'
-  );
-};
+export const getBaseURL = () =>
+  localStorage.getItem('api_host') ||
+  import.meta.env.VITE_API_HOST ||
+  'https://frontend.myapp.local/';
 
 export const api = axios.create({
   baseURL: getBaseURL(),
@@ -19,18 +16,9 @@ export const updateApiBaseURL = (newBaseURL: string) => {
   api.defaults.baseURL = newBaseURL;
 };
 
-// Interceptor to add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 export interface InviteCodes {
-  cursor?: string;
   codes: InviteCode[];
+  cursor?: string | null;
 }
 
 export interface InviteCode {
@@ -42,39 +30,49 @@ export interface InviteCode {
   createdAt: string;
   uses: {
     usedBy: string;
-    usedByHandle?: string | null;
-    usedByEmail?: string | null;
+    usedByHandle: string | null;
+    usedByEmail: string | null;
     usedAt: string;
-    usedByDeactivated?: boolean;
+    usedByDeactivated: boolean | null;
   }[];
 }
 
 export interface Admin {
   username: string;
-  createdAt: string;
+  otp_enabled: boolean;
+  otp_verified: boolean;
 }
 
 export interface AdminsResponse {
+  status: string;
   admins: Admin[];
 }
 
 export interface LoginResponse {
-  token?: string;
-  two_factor_token?: string;
-  username?: string;
-  otp_enabled?: boolean;
-  otp_verified?: boolean;
-  otp_auth_url?: string;
-}
-
-export interface GenerateOtpResponse {
-  qr_code: string;
+  username: string;
+  otp_enabled: boolean;
+  otp_verified: boolean;
+  otp_auth_url: string | null;
 }
 
 export interface AddAdminResponse {
   status: string;
   message: string;
-  password?: string;
+  password: string;
+}
+
+export interface RemoveAdminResponse {
+  status: string;
+  message: string;
+}
+
+export interface ValidateOtpResponse {
+  otp_valid: boolean;
+}
+
+export interface VerifyOtpResponse {
+  otp_verified: boolean;
+  user: LoginResponse;
 }
 
 export const apiService = {
@@ -84,28 +82,25 @@ export const apiService = {
   getInviteCodes: (): Promise<AxiosResponse<InviteCodes>> =>
     api.get<InviteCodes>('/api/invite-codes'),
 
-  createInviteCodes: (count: number): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.post('/api/create-invite-codes', { codeCount: count, useCount: 1 }),
+  createInviteCodes: (count: number): Promise<AxiosResponse<void>> =>
+    api.post<void>('/api/create-invite-codes', { codeCount: count, useCount: 1 }),
 
-  disableInviteCode: (code: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.post('/api/disable-invite-codes', { codes: [code], accounts: [] }),
+  disableInviteCode: (code: string): Promise<AxiosResponse<void>> =>
+    api.post<void>('/api/disable-invite-codes', { codes: [code], accounts: [] }),
 
-  generateOtp: (): Promise<AxiosResponse<GenerateOtpResponse>> =>
-    api.get<GenerateOtpResponse>('/api/auth/otp/generate'),
+  validateOtp: (token: string): Promise<AxiosResponse<ValidateOtpResponse>> =>
+    api.post<ValidateOtpResponse>('/api/auth/otp/validate', { token }),
 
-  validateOtp: (token: string): Promise<AxiosResponse<LoginResponse>> =>
-    api.post('/api/auth/otp/validate', { token }),
-
-  verifyOtp: (token: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.post('/api/auth/otp/verify', { token }),
+  verifyOtp: (token: string): Promise<AxiosResponse<VerifyOtpResponse>> =>
+    api.post<VerifyOtpResponse>('/api/auth/otp/verify', { token }),
 
   getAdmins: (): Promise<AxiosResponse<AdminsResponse>> => api.get<AdminsResponse>('/api/admins'),
 
   addAdmin: (username: string): Promise<AxiosResponse<AddAdminResponse>> =>
     api.post<AddAdminResponse>('/api/admins', { username }),
 
-  removeAdmin: (username: string): Promise<AxiosResponse<{ success: boolean }>> =>
-    api.delete('/api/admins', { data: { username } }),
+  removeAdmin: (username: string): Promise<AxiosResponse<RemoveAdminResponse>> =>
+    api.delete<RemoveAdminResponse>('/api/admins', { data: { username } }),
 };
 
 export const mockApiService = {
@@ -114,7 +109,6 @@ export const mockApiService = {
     if (username === 'new-user') {
       return {
         data: {
-          token: 'mock-token-new',
           username: 'new-user',
           otp_enabled: false,
           otp_verified: false,
@@ -122,7 +116,14 @@ export const mockApiService = {
         },
       };
     }
-    return { data: { token: 'mock-token', username: 'demo-user' } };
+    return {
+      data: {
+        username: 'demo-user',
+        otp_enabled: true,
+        otp_verified: true,
+        otp_auth_url: null,
+      },
+    };
   },
 
   getInviteCodes: async (): Promise<{ data: InviteCodes }> => {
@@ -148,6 +149,7 @@ export const mockApiService = {
           {
             usedBy: 'did:plc:mockuser',
             usedByHandle: 'mockuser.bsky.social',
+            usedByEmail: null,
             usedAt: new Date().toISOString(),
             usedByDeactivated: false,
           },
@@ -164,6 +166,7 @@ export const mockApiService = {
           {
             usedBy: 'did:plc:mockgone',
             usedByHandle: 'mockgone.bsky.social',
+            usedByEmail: null,
             usedAt: new Date(Date.now() - 172800000).toISOString(),
             usedByDeactivated: true,
           },
@@ -179,34 +182,39 @@ export const mockApiService = {
         uses: [],
       },
     ];
-    return { data: { codes } };
+    return { data: { codes, cursor: null } };
   },
 
-  createInviteCodes: async (count: number): Promise<{ data: { success: boolean } }> => {
+  createInviteCodes: async (count: number): Promise<{ data: void }> => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     console.log(`Mock: Created ${count} invite codes`);
-    return { data: { success: true } };
+    return { data: undefined };
   },
 
-  disableInviteCode: async (code: string): Promise<{ data: { success: boolean } }> => {
+  disableInviteCode: async (code: string): Promise<{ data: void }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     console.log(`Mock: Disabled code ${code}`);
-    return { data: { success: true } };
+    return { data: undefined };
   },
 
-  generateOtp: async (): Promise<{ data: GenerateOtpResponse }> => {
+  validateOtp: async (_token: string): Promise<{ data: ValidateOtpResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return { data: { qr_code: 'mock-qr-code' } };
+    return { data: { otp_valid: true } };
   },
 
-  validateOtp: async (_token: string): Promise<{ data: { token: string } }> => {
+  verifyOtp: async (_token: string): Promise<{ data: VerifyOtpResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return { data: { token: 'mock-token' } };
-  },
-
-  verifyOtp: async (_token: string): Promise<{ data: { success: boolean } }> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return { data: { success: true } };
+    return {
+      data: {
+        otp_verified: true,
+        user: {
+          username: 'new-user',
+          otp_enabled: true,
+          otp_verified: true,
+          otp_auth_url: null,
+        },
+      },
+    };
   },
 
   getAdmins: async (): Promise<{ data: AdminsResponse }> => {
@@ -214,11 +222,11 @@ export const mockApiService = {
     const admins: Admin[] = JSON.parse(
       localStorage.getItem('mock_admins') ||
         JSON.stringify([
-          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
-          { username: 'demo-user', createdAt: new Date().toISOString() },
+          { username: 'admin', otp_enabled: true, otp_verified: true },
+          { username: 'demo-user', otp_enabled: true, otp_verified: true },
         ])
     );
-    return { data: { admins } };
+    return { data: { status: 'success', admins } };
   },
 
   addAdmin: async (username: string): Promise<{ data: AddAdminResponse }> => {
@@ -226,12 +234,12 @@ export const mockApiService = {
     const admins = JSON.parse(
       localStorage.getItem('mock_admins') ||
         JSON.stringify([
-          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
-          { username: 'demo-user', createdAt: new Date().toISOString() },
+          { username: 'admin', otp_enabled: true, otp_verified: true },
+          { username: 'demo-user', otp_enabled: true, otp_verified: true },
         ])
     );
     if (!admins.find((a: Admin) => a.username === username)) {
-      admins.push({ username, createdAt: new Date().toISOString() });
+      admins.push({ username, otp_enabled: false, otp_verified: false });
       localStorage.setItem('mock_admins', JSON.stringify(admins));
     }
     return {
@@ -243,17 +251,17 @@ export const mockApiService = {
     };
   },
 
-  removeAdmin: async (username: string): Promise<{ data: { success: boolean } }> => {
+  removeAdmin: async (username: string): Promise<{ data: RemoveAdminResponse }> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const admins = JSON.parse(
       localStorage.getItem('mock_admins') ||
         JSON.stringify([
-          { username: 'admin', createdAt: new Date(Date.now() - 604800000).toISOString() },
-          { username: 'demo-user', createdAt: new Date().toISOString() },
+          { username: 'admin', otp_enabled: true, otp_verified: true },
+          { username: 'demo-user', otp_enabled: true, otp_verified: true },
         ])
     );
     const filtered = admins.filter((a: Admin) => a.username !== username);
     localStorage.setItem('mock_admins', JSON.stringify(filtered));
-    return { data: { success: true } };
+    return { data: { status: 'success', message: 'Admin user removed successfully' } };
   },
 };

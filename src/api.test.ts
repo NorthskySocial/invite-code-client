@@ -7,7 +7,12 @@ const handlers = [
   http.post('https://frontend.myapp.local/api/auth/login', async ({ request }) => {
     const { username } = (await request.json()) as { username: string };
     if (username === 'testuser') {
-      return HttpResponse.json({ token: 'fake-token', username: 'testuser' });
+      return HttpResponse.json({
+        username: 'testuser',
+        otp_enabled: true,
+        otp_verified: true,
+        otp_auth_url: null,
+      });
     }
     return new HttpResponse(null, { status: 401 });
   }),
@@ -31,37 +36,49 @@ const handlers = [
           forAccount: 'admin',
           createdBy: 'admin',
           createdAt: '2026-01-25T08:02:05.614Z',
-          uses: [{ usedBy: 'user1', usedAt: '2026-01-25T08:12:55.280Z' }],
+          uses: [
+            {
+              usedBy: 'user1',
+              usedByHandle: null,
+              usedByEmail: null,
+              usedAt: '2026-01-25T08:12:55.280Z',
+              usedByDeactivated: null,
+            },
+          ],
         },
       ],
+      cursor: null,
     });
   }),
 
-  http.post('https://frontend.myapp.local/api/create-invite-codes', async ({ request }) => {
-    const { codeCount } = (await request.json()) as { codeCount: number };
-    return HttpResponse.json({ message: `Created ${codeCount} codes` });
-  }),
+  http.post('https://frontend.myapp.local/api/create-invite-codes', () =>
+    new HttpResponse(null, { status: 200 })
+  ),
 
-  http.post('https://frontend.myapp.local/api/disable-invite-codes', async ({ request }) => {
-    const { codes } = (await request.json()) as { codes: string[] };
-    return HttpResponse.json({ message: `Disabled code ${codes[0]}` });
-  }),
-
-  http.get('https://frontend.myapp.local/api/auth/otp/generate', () => {
-    return HttpResponse.json({ qr_code: 'fake-qr-code' });
-  }),
+  http.post('https://frontend.myapp.local/api/disable-invite-codes', () =>
+    new HttpResponse(null, { status: 200 })
+  ),
 
   http.post('https://frontend.myapp.local/api/auth/otp/validate', () => {
-    return HttpResponse.json({ success: true });
+    return HttpResponse.json({ otp_valid: true });
   }),
 
   http.post('https://frontend.myapp.local/api/auth/otp/verify', () => {
-    return HttpResponse.json({ success: true });
+    return HttpResponse.json({
+      otp_verified: true,
+      user: {
+        username: 'testuser',
+        otp_enabled: true,
+        otp_verified: true,
+        otp_auth_url: null,
+      },
+    });
   }),
 
   http.get('https://frontend.myapp.local/api/admins', () => {
     return HttpResponse.json({
-      admins: [{ username: 'admin', createdAt: '2026-01-25T08:02:05.614Z' }],
+      status: 'success',
+      admins: [{ username: 'admin', otp_enabled: true, otp_verified: true }],
     });
   }),
 
@@ -75,7 +92,7 @@ const handlers = [
   }),
 
   http.delete('https://frontend.myapp.local/api/admins', () => {
-    return HttpResponse.json({ success: true });
+    return HttpResponse.json({ status: 'success', message: 'Admin user removed successfully' });
   }),
 ];
 
@@ -86,30 +103,27 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('apiService', () => {
-  it('login should return token and username', async () => {
+  it('login should return admin state and username', async () => {
     const response = await apiService.login('testuser', 'password');
-    expect(response.data).toEqual({ token: 'fake-token', username: 'testuser' });
+    expect(response.data.username).toBe('testuser');
+    expect(response.data.otp_verified).toBe(true);
   });
 
   it('getInviteCodes should return list of invite codes', async () => {
     const response = await apiService.getInviteCodes();
     expect(response.data.codes).toHaveLength(2);
     expect(response.data.codes[0].code).toBe('CODE1');
+    expect(response.data.cursor).toBeNull();
   });
 
   it('createInviteCodes should send correct count', async () => {
     const response = await apiService.createInviteCodes(5);
-    expect(response.data).toEqual({ message: 'Created 5 codes' });
+    expect(response.data).toBe('');
   });
 
   it('disableInviteCode should send correct code', async () => {
     const response = await apiService.disableInviteCode('CODE1');
-    expect(response.data).toEqual({ message: 'Disabled code CODE1' });
-  });
-
-  it('generateOtp should return qr_code', async () => {
-    const response = await apiService.generateOtp();
-    expect(response.data).toEqual({ qr_code: 'fake-qr-code' });
+    expect(response.data).toBe('');
   });
 
   it('validateOtp should return success and include credentials', async () => {
@@ -117,17 +131,17 @@ describe('apiService', () => {
     server.use(
       http.post('https://frontend.myapp.local/api/auth/otp/validate', ({ request }) => {
         credentialsIncluded = request.credentials === 'include';
-        return HttpResponse.json({ success: true });
+        return HttpResponse.json({ otp_valid: true });
       })
     );
     const response = await apiService.validateOtp('123456');
-    expect(response.data).toEqual({ success: true });
+    expect(response.data).toEqual({ otp_valid: true });
     expect(credentialsIncluded).toBe(true);
   });
 
   it('verifyOtp should return success', async () => {
     const response = await apiService.verifyOtp('123456');
-    expect(response.data).toEqual({ success: true });
+    expect(response.data.otp_verified).toBe(true);
   });
 
   it('getAdmins should return list of admins', async () => {
@@ -149,40 +163,13 @@ describe('apiService', () => {
       http.delete('https://frontend.myapp.local/api/admins', async ({ request }) => {
         requestedUrl = request.url;
         requestedBody = (await request.json()) as { username?: string };
-        return HttpResponse.json({ success: true });
+        return HttpResponse.json({ status: 'success', message: 'Admin user removed successfully' });
       })
     );
     const response = await apiService.removeAdmin('gone');
-    expect(response.data).toEqual({ success: true });
+    expect(response.data.status).toBe('success');
     expect(requestedUrl).toBe('https://frontend.myapp.local/api/admins');
     expect(requestedBody).toEqual({ username: 'gone' });
-  });
-});
-
-describe('auth token interceptor', () => {
-  it('adds an Authorization header when a token is stored', async () => {
-    localStorage.setItem('token', 'abc123');
-    let authHeader: string | null = null;
-    server.use(
-      http.get('https://frontend.myapp.local/api/invite-codes', ({ request }) => {
-        authHeader = request.headers.get('Authorization');
-        return HttpResponse.json({ codes: [] });
-      })
-    );
-    await apiService.getInviteCodes();
-    expect(authHeader).toBe('Bearer abc123');
-  });
-
-  it('omits the Authorization header when no token is stored', async () => {
-    let authHeader: string | null = 'unset';
-    server.use(
-      http.get('https://frontend.myapp.local/api/invite-codes', ({ request }) => {
-        authHeader = request.headers.get('Authorization');
-        return HttpResponse.json({ codes: [] });
-      })
-    );
-    await apiService.getInviteCodes();
-    expect(authHeader).toBeNull();
   });
 });
 
@@ -208,10 +195,10 @@ describe('base URL resolution', () => {
 });
 
 describe('mockApiService', () => {
-  it('login returns a demo token for a regular user', async () => {
+  it('login returns verified admin state for a regular user', async () => {
     const response = await mockApiService.login('demo-user', 'pw');
-    expect(response.data.token).toBe('mock-token');
     expect(response.data.username).toBe('demo-user');
+    expect(response.data.otp_verified).toBe(true);
   });
 
   it('login returns OTP setup fields for a new user', async () => {

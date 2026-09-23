@@ -63,10 +63,8 @@ type FilterStatus = 'All' | 'Used' | 'Unused' | 'Disabled';
 
 function App() {
   const [page, setPage] = useState<Page>(() => {
-    const token = localStorage.getItem('token');
-    return token ? 'Home' : 'Login';
+    return localStorage.getItem('authenticated') === 'true' ? 'Home' : 'Login';
   });
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('theme');
     return (
@@ -140,8 +138,7 @@ function App() {
   }, [invites, filter]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
-    setToken(null);
+    localStorage.removeItem('authenticated');
     setQrCode(null);
     setOtpToken('');
     setError(null);
@@ -253,32 +250,16 @@ function App() {
 
     try {
       const response = await activeService.login(username, password);
-      if (response.data.otp_enabled && response.data.otp_verified && !response.data.token) {
+      if (response.data.otp_enabled && !response.data.otp_verified) {
         setPage('QrValidate');
-        return;
-      }
-
-      // If OTP is enabled but not verified, OR if OTP is disabled and not verified (new setup)
-      if (
-        (response.data.otp_enabled && !response.data.otp_verified) ||
-        (!response.data.otp_enabled && !response.data.otp_verified)
-      ) {
+      } else if (!response.data.otp_enabled && !response.data.otp_verified) {
         if (response.data.otp_auth_url) {
           const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
           setQrCode(qrCodeUrl);
           setPage('QrVerify');
-        } else {
-          if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
-            setToken(response.data.token);
-          }
-          setPage('Home');
         }
       } else {
-        if (response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          setToken(response.data.token);
-        }
+        localStorage.setItem('authenticated', 'true');
         setPage('Home');
       }
     } catch (err: unknown) {
@@ -326,11 +307,11 @@ function App() {
     setError(null);
     try {
       const response = await activeService.verifyOtp(otpToken);
-      const token = (response.data as unknown as { token?: string }).token;
-      if (token) {
-        localStorage.setItem('token', token);
-        setToken(token);
+      if (!response.data.otp_verified) {
+        setError('OTP Verification failed');
+        return;
       }
+      localStorage.setItem('authenticated', 'true');
       setNotice('OTP verified successfully');
       setPage('Home');
     } catch (err: unknown) {
@@ -349,11 +330,11 @@ function App() {
     setError(null);
     try {
       const response = await activeService.validateOtp(otpToken);
-      const token = (response.data as unknown as { token?: string }).token;
-      if (token) {
-        localStorage.setItem('token', token);
-        setToken(token);
+      if (!response.data.otp_valid) {
+        setError('OTP Validation failed');
+        return;
       }
+      localStorage.setItem('authenticated', 'true');
       setNotice('OTP validated successfully');
       setPage('Home');
     } catch (err: unknown) {
@@ -685,9 +666,6 @@ function App() {
                       <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Username
                       </th>
-                      <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Added Date
-                      </th>
                       <th className="py-4 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">
                         Actions
                       </th>
@@ -697,7 +675,7 @@ function App() {
                     {admins.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={3}
+                          colSpan={2}
                           className="py-8 text-center text-gray-500 dark:text-gray-400"
                         >
                           No admins found.
@@ -713,9 +691,6 @@ function App() {
                             <span className="font-medium text-gray-800 dark:text-white">
                               {admin.username}
                             </span>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
-                            {formatDate(admin.createdAt)}
                           </td>
                           <td className="py-4 px-4 text-right">
                             <button
@@ -1120,11 +1095,7 @@ function App() {
                 <button
                   onClick={() => {
                     setError(null);
-                    if (token) {
-                      setPage('Home');
-                    } else {
-                      setPage('Login');
-                    }
+                    setPage('Login');
                   }}
                   className="flex-1 p-4 border dark:border-gray-600 dark:text-white rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
