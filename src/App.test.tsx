@@ -45,8 +45,18 @@ const server = setupServer(
     HttpResponse.json({ status: 'success', message: 'ok', password: 'generated-pass' })
   ),
   http.delete(`${API_HOST}/api/admins`, () => HttpResponse.json({ success: true })),
-  http.post(`${API_HOST}/api/auth/otp/verify`, () => HttpResponse.json({ token: 'otp-token' })),
-  http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({ token: 'otp-token' }))
+  http.post(`${API_HOST}/api/auth/otp/verify`, () =>
+    HttpResponse.json({
+      otp_verified: true,
+      user: {
+        username: 'admin',
+        otp_enabled: true,
+        otp_verified: true,
+        otp_auth_url: null,
+      },
+    })
+  ),
+  http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({ otp_valid: true }))
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -54,7 +64,7 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 const renderLoggedIn = () => {
-  localStorage.setItem('token', 'fake-token');
+  localStorage.setItem('authenticated', 'true');
   return render(<App />);
 };
 
@@ -112,7 +122,7 @@ describe('App', () => {
     renderLoggedIn();
 
     await waitFor(() => expect(screen.getByPlaceholderText('Username')).toBeInTheDocument());
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('authenticated')).toBeNull();
   });
 
   it('clears the session when the logout button is clicked', async () => {
@@ -122,7 +132,7 @@ describe('App', () => {
     fireEvent.click(screen.getByTitle('Logout'));
 
     await waitFor(() => expect(screen.getByPlaceholderText('Username')).toBeInTheDocument());
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('authenticated')).toBeNull();
   });
 
   it('fetches invites once on mount and does not refetch when filtering', async () => {
@@ -152,14 +162,14 @@ const fillLogin = (username: string) => {
 };
 
 describe('login flow', () => {
-  it('stores the token and shows Home on a successful login', async () => {
+  it('stores the authenticated session and shows Home on a successful login', async () => {
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
         HttpResponse.json({
-          token: 'new-token',
           otp_enabled: true,
           otp_verified: true,
           username: 'admin',
+          otp_auth_url: null,
         })
       )
     );
@@ -167,14 +177,19 @@ describe('login flow', () => {
     render(<App />);
     fillLogin('admin');
 
-    await waitFor(() => expect(localStorage.getItem('token')).toBe('new-token'));
+    await waitFor(() => expect(localStorage.getItem('authenticated')).toBe('true'));
     await expectCodeVisible('UNUSED-CODE');
   });
 
   it('routes to the OTP validation screen when 2FA is required', async () => {
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
-        HttpResponse.json({ otp_enabled: true, otp_verified: true })
+        HttpResponse.json({
+          username: 'twofa',
+          otp_enabled: true,
+          otp_verified: false,
+          otp_auth_url: null,
+        })
       )
     );
 
@@ -184,7 +199,7 @@ describe('login flow', () => {
     await waitFor(() =>
       expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument()
     );
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('authenticated')).toBeNull();
   });
 
   it('routes to the OTP setup screen when an auth URL is returned', async () => {
@@ -296,7 +311,7 @@ describe('admins page', () => {
     server.use(
       http.get(`${API_HOST}/api/admins`, () =>
         HttpResponse.json({
-          admins: [{ username: 'carol', createdAt: '2026-01-25T08:02:05.614Z' }],
+          admins: [{ username: 'carol', otp_enabled: true, otp_verified: true }],
         })
       ),
       http.delete(`${API_HOST}/api/admins`, async ({ request }) => {
@@ -321,7 +336,7 @@ describe('admins page', () => {
     server.use(
       http.get(`${API_HOST}/api/admins`, () =>
         HttpResponse.json({
-          admins: [{ username: 'carol', createdAt: '2026-01-25T08:02:05.614Z' }],
+          admins: [{ username: 'carol', otp_enabled: true, otp_verified: true }],
         })
       ),
       http.delete(`${API_HOST}/api/admins`, () => {
@@ -381,14 +396,19 @@ describe('OTP verification and validation', () => {
     fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
 
-    await waitFor(() => expect(localStorage.getItem('token')).toBe('otp-token'));
+    await waitFor(() => expect(localStorage.getItem('authenticated')).toBe('true'));
     expect(await screen.findByText('OTP verified successfully')).toBeInTheDocument();
   });
 
   it('validates a 2FA token and lands on Home', async () => {
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
-        HttpResponse.json({ otp_enabled: true, otp_verified: true })
+        HttpResponse.json({
+          username: 'twofa',
+          otp_enabled: true,
+          otp_verified: false,
+          otp_auth_url: null,
+        })
       )
     );
 
@@ -401,17 +421,24 @@ describe('OTP verification and validation', () => {
     fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
 
-    await waitFor(() => expect(localStorage.getItem('token')).toBe('otp-token'));
+    await waitFor(() => expect(localStorage.getItem('authenticated')).toBe('true'));
     expect(await screen.findByText('OTP validated successfully')).toBeInTheDocument();
     await expectCodeVisible('UNUSED-CODE');
   });
 
-  it('loads invites after 2FA even when no token is returned', async () => {
+  it('loads invites after 2FA with the session cookie', async () => {
     server.use(
       http.post(`${API_HOST}/api/auth/login`, () =>
-        HttpResponse.json({ otp_enabled: true, otp_verified: true })
+        HttpResponse.json({
+          username: 'twofa',
+          otp_enabled: true,
+          otp_verified: false,
+          otp_auth_url: null,
+        })
       ),
-      http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({}))
+      http.post(`${API_HOST}/api/auth/otp/validate`, () =>
+        HttpResponse.json({ otp_valid: true })
+      )
     );
 
     render(<App />);
