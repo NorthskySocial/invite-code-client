@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import QRCode from 'qrcode';
 import {
   apiService,
   mockApiService,
@@ -254,7 +255,10 @@ function App() {
         setPage('QrValidate');
       } else if (!response.data.otp_enabled && !response.data.otp_verified) {
         if (response.data.otp_auth_url) {
-          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(response.data.otp_auth_url)}`;
+          const qrCodeUrl = await QRCode.toDataURL(response.data.otp_auth_url, {
+            width: 200,
+            margin: 1,
+          });
           setQrCode(qrCodeUrl);
           setPage('QrVerify');
         }

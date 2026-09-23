@@ -219,7 +219,10 @@ describe('login flow', () => {
     await waitFor(() =>
       expect(screen.getByText('Setup Multi-Factor Authentication')).toBeInTheDocument()
     );
-    expect(screen.getByAltText('OTP QR Code')).toBeInTheDocument();
+    expect(screen.getByAltText('OTP QR Code')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/^data:image\/png;base64,/)
+    );
   });
 
   it('shows an error message when login fails', async () => {
