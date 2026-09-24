@@ -79,6 +79,8 @@ export const apiService = {
   login: (username: string, password: string): Promise<AxiosResponse<LoginResponse>> =>
     api.post<LoginResponse>('/api/auth/login', { username, password }),
 
+  logout: (): Promise<AxiosResponse<void>> => api.post<void>('/api/auth/logout'),
+
   getInviteCodes: (): Promise<AxiosResponse<InviteCodes>> =>
     api.get<InviteCodes>('/api/invite-codes'),
 
@@ -124,6 +126,11 @@ export const mockApiService = {
         otp_auth_url: null,
       },
     };
+  },
+
+  logout: async (): Promise<{ data: void }> => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return { data: undefined };
   },
 
   getInviteCodes: async (): Promise<{ data: InviteCodes }> => {

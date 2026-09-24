@@ -17,6 +17,10 @@ const handlers = [
     return new HttpResponse(null, { status: 401 });
   }),
 
+  http.post('https://frontend.myapp.local/api/auth/logout', () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
   http.get('https://frontend.myapp.local/api/invite-codes', () => {
     return HttpResponse.json({
       codes: [
@@ -107,6 +111,11 @@ describe('apiService', () => {
     const response = await apiService.login('testuser', 'password');
     expect(response.data.username).toBe('testuser');
     expect(response.data.otp_verified).toBe(true);
+  });
+
+  it('logout should invalidate the session', async () => {
+    const response = await apiService.logout();
+    expect(response.status).toBe(204);
   });
 
   it('getInviteCodes should return list of invite codes', async () => {

@@ -45,6 +45,7 @@ const server = setupServer(
     HttpResponse.json({ status: 'success', message: 'ok', password: 'generated-pass' })
   ),
   http.delete(`${API_HOST}/api/admins`, () => HttpResponse.json({ success: true })),
+  http.post(`${API_HOST}/api/auth/logout`, () => new HttpResponse(null, { status: 204 })),
   http.post(`${API_HOST}/api/auth/otp/verify`, () =>
     HttpResponse.json({
       otp_verified: true,
@@ -135,6 +136,23 @@ describe('App', () => {
     expect(localStorage.getItem('authenticated')).toBeNull();
   });
 
+  it('invalidates the server session when logging out', async () => {
+    let logoutRequests = 0;
+    server.use(
+      http.post(`${API_HOST}/api/auth/logout`, () => {
+        logoutRequests += 1;
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    renderLoggedIn();
+    await expectCodeVisible('UNUSED-CODE');
+
+    fireEvent.click(screen.getByTitle('Logout'));
+
+    await waitFor(() => expect(logoutRequests).toBe(1));
+  });
+
   it('fetches invites once on mount and does not refetch when filtering', async () => {
     let inviteRequests = 0;
     server.use(
@@ -223,6 +241,31 @@ describe('login flow', () => {
       'src',
       expect.stringMatching(/^data:image\/png;base64,/)
     );
+  });
+
+  it('returns to login when OTP setup is cancelled', async () => {
+    server.use(
+      http.post(`${API_HOST}/api/auth/login`, () =>
+        HttpResponse.json({
+          otp_enabled: false,
+          otp_verified: false,
+          username: 'newuser',
+          otp_auth_url: 'otpauth://totp/InviteCode:x?secret=S',
+        })
+      )
+    );
+
+    render(<App />);
+    fillLogin('newuser');
+
+    await waitFor(() =>
+      expect(screen.getByText('Setup Multi-Factor Authentication')).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText('Username')).toBeInTheDocument());
+    expect(localStorage.getItem('authenticated')).toBeNull();
   });
 
   it('shows an error message when login fails', async () => {
