@@ -139,12 +139,13 @@ function App() {
   }, [invites, filter]);
 
   const handleLogout = useCallback(() => {
+    void activeService.logout().catch(() => undefined);
     localStorage.removeItem('authenticated');
     setQrCode(null);
     setOtpToken('');
     setError(null);
     setPage('Login');
-  }, []);
+  }, [activeService]);
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
@@ -1054,10 +1055,7 @@ function App() {
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => {
-                    setError(null);
-                    setPage('Home');
-                  }}
+                  onClick={handleLogout}
                   className="flex-1 p-4 border dark:border-gray-600 dark:text-white rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >
                   Cancel
