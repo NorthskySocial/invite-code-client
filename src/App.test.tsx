@@ -622,6 +622,12 @@ describe('theme and demo mode', () => {
     fireEvent.click(screen.getByRole('switch'));
     fireEvent.click(screen.getByRole('button', { name: /Start Demo/ }));
 
+    await waitFor(() =>
+      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument()
+    );
+    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
     await waitFor(
       () => expect(screen.getAllByText('DEMO-123').length).toBeGreaterThan(0),
       { timeout: 3000 }
