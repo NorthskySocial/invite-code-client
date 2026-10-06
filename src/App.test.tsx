@@ -180,8 +180,18 @@ const fillLogin = (username: string) => {
 };
 
 describe('login flow', () => {
-  it('stores the authenticated session and shows Home on a successful login', async () => {
+  it('requires OTP validation before loading protected data', async () => {
+    let inviteRequests = 0;
+    let adminRequests = 0;
     server.use(
+      http.get(`${API_HOST}/api/invite-codes`, () => {
+        inviteRequests += 1;
+        return HttpResponse.json({ codes: invites });
+      }),
+      http.get(`${API_HOST}/api/admins`, () => {
+        adminRequests += 1;
+        return HttpResponse.json({ admins: [] });
+      }),
       http.post(`${API_HOST}/api/auth/login`, () =>
         HttpResponse.json({
           otp_enabled: true,
@@ -195,8 +205,12 @@ describe('login flow', () => {
     render(<App />);
     fillLogin('admin');
 
-    await waitFor(() => expect(localStorage.getItem('authenticated')).toBe('true'));
-    await expectCodeVisible('UNUSED-CODE');
+    await waitFor(() =>
+      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument()
+    );
+    expect(localStorage.getItem('authenticated')).toBeNull();
+    expect(inviteRequests).toBe(0);
+    expect(adminRequests).toBe(0);
   });
 
   it('routes to the OTP validation screen when 2FA is required', async () => {
@@ -205,7 +219,7 @@ describe('login flow', () => {
         HttpResponse.json({
           username: 'twofa',
           otp_enabled: true,
-          otp_verified: false,
+          otp_verified: true,
           otp_auth_url: null,
         })
       )
@@ -452,7 +466,7 @@ describe('OTP verification and validation', () => {
         HttpResponse.json({
           username: 'twofa',
           otp_enabled: true,
-          otp_verified: false,
+          otp_verified: true,
           otp_auth_url: null,
         })
       )
@@ -478,7 +492,7 @@ describe('OTP verification and validation', () => {
         HttpResponse.json({
           username: 'twofa',
           otp_enabled: true,
-          otp_verified: false,
+          otp_verified: true,
           otp_auth_url: null,
         })
       ),

@@ -252,17 +252,15 @@ function App() {
 
     try {
       const response = await activeService.login(username, password);
-      if (response.data.otp_enabled && !response.data.otp_verified) {
+      if (response.data.otp_verified) {
         setPage('QrValidate');
-      } else if (!response.data.otp_enabled && !response.data.otp_verified) {
-        if (response.data.otp_auth_url) {
-          const qrCodeUrl = await QRCode.toDataURL(response.data.otp_auth_url, {
-            width: 200,
-            margin: 1,
-          });
-          setQrCode(qrCodeUrl);
-          setPage('QrVerify');
-        }
+      } else if (response.data.otp_auth_url) {
+        const qrCodeUrl = await QRCode.toDataURL(response.data.otp_auth_url, {
+          width: 200,
+          margin: 1,
+        });
+        setQrCode(qrCodeUrl);
+        setPage('QrVerify');
       } else {
         localStorage.setItem('authenticated', 'true');
         setPage('Home');
