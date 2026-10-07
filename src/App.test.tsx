@@ -60,7 +60,7 @@ const server = setupServer(
   http.post(`${API_HOST}/api/auth/otp/validate`, () => HttpResponse.json({ otp_valid: true }))
 );
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

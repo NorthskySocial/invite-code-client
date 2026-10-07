@@ -46,6 +46,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'https://frontend.myapp.local',
+      },
+    },
     setupFiles: './src/test/setup.ts',
     execArgv,
   },
