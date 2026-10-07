@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { apiService, api, updateApiBaseURL, getBaseURL, mockApiService } from './api';
+import { apiService, api, updateApiBaseURL, getBaseURL } from './api';
 
 const handlers = [
   http.post('https://frontend.myapp.local/api/auth/login', async ({ request }) => {
@@ -17,8 +17,9 @@ const handlers = [
     return new HttpResponse(null, { status: 401 });
   }),
 
-  http.post('https://frontend.myapp.local/api/auth/logout', () =>
-    new HttpResponse(null, { status: 204 })
+  http.post(
+    'https://frontend.myapp.local/api/auth/logout',
+    () => new HttpResponse(null, { status: 204 })
   ),
 
   http.get('https://frontend.myapp.local/api/invite-codes', () => {
@@ -55,12 +56,14 @@ const handlers = [
     });
   }),
 
-  http.post('https://frontend.myapp.local/api/create-invite-codes', () =>
-    new HttpResponse(null, { status: 200 })
+  http.post(
+    'https://frontend.myapp.local/api/create-invite-codes',
+    () => new HttpResponse(null, { status: 200 })
   ),
 
-  http.post('https://frontend.myapp.local/api/disable-invite-codes', () =>
-    new HttpResponse(null, { status: 200 })
+  http.post(
+    'https://frontend.myapp.local/api/disable-invite-codes',
+    () => new HttpResponse(null, { status: 200 })
   ),
 
   http.post('https://frontend.myapp.local/api/auth/otp/validate', () => {
@@ -181,7 +184,6 @@ describe('apiService', () => {
     expect(requestedBody).toEqual({ username: 'gone' });
   });
 });
-
 describe('base URL resolution', () => {
   it('getBaseURL falls back to the default host when nothing is configured', () => {
     expect(getBaseURL()).toBe('https://frontend.myapp.local/');
@@ -200,40 +202,5 @@ describe('base URL resolution', () => {
     } finally {
       api.defaults.baseURL = original;
     }
-  });
-});
-
-describe('mockApiService', () => {
-  it('login returns verified admin state for a regular user', async () => {
-    const response = await mockApiService.login('demo-user', 'pw');
-    expect(response.data.username).toBe('demo-user');
-    expect(response.data.otp_verified).toBe(true);
-  });
-
-  it('login returns OTP setup fields for a new user', async () => {
-    const response = await mockApiService.login('new-user', 'pw');
-    expect(response.data.otp_enabled).toBe(false);
-    expect(response.data.otp_auth_url).toContain('otpauth://');
-  });
-
-  it('getInviteCodes returns the demo fixtures', async () => {
-    const response = await mockApiService.getInviteCodes();
-    expect(response.data.codes).toHaveLength(4);
-    expect(response.data.codes.map((c) => c.code)).toContain('DEMO-123');
-  });
-
-  it('addAdmin persists the new admin and returns a password', async () => {
-    const response = await mockApiService.addAdmin('grace');
-    expect(response.data.status).toBe('success');
-    expect(response.data.password).toContain('mock-generated-password-');
-
-    const after = await mockApiService.getAdmins();
-    expect(after.data.admins.map((a) => a.username)).toContain('grace');
-  });
-
-  it('removeAdmin drops the admin from the persisted list', async () => {
-    await mockApiService.removeAdmin('admin');
-    const after = await mockApiService.getAdmins();
-    expect(after.data.admins.map((a) => a.username)).not.toContain('admin');
   });
 });

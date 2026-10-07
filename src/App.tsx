@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import QRCode from 'qrcode';
 import {
   apiService,
-  mockApiService,
   updateApiBaseURL,
   InviteCode,
   Admin,
@@ -22,7 +21,6 @@ import {
   Sun,
   Moon,
   Globe,
-  Zap,
   Users,
   UserPlus,
   UserMinus,
@@ -84,8 +82,6 @@ function App() {
       import.meta.env.VITE_API_HOST ||
       'https://frontend.myapp.local/'
   );
-  const [isDemoMode, setIsDemoMode] = useState(localStorage.getItem('demo_mode') === 'true');
-  const activeService = isDemoMode ? mockApiService : apiService;
   const [otpToken, setOtpToken] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState(1);
@@ -139,18 +135,18 @@ function App() {
   }, [invites, filter]);
 
   const handleLogout = useCallback(() => {
-    void activeService.logout().catch(() => undefined);
+    void apiService.logout().catch(() => undefined);
     localStorage.removeItem('authenticated');
     setQrCode(null);
     setOtpToken('');
     setError(null);
     setPage('Login');
-  }, [activeService]);
+  }, []);
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await activeService.getInviteCodes();
+      const response = await apiService.getInviteCodes();
       const data = response.data?.codes || [];
       setInvites(Array.isArray(data) ? data : []);
       setError(null);
@@ -166,12 +162,12 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeService, handleLogout]);
+  }, [handleLogout]);
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await activeService.getAdmins();
+      const response = await apiService.getAdmins();
       setAdmins(response.data?.admins || []);
       setError(null);
     } catch (err: unknown) {
@@ -184,7 +180,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeService, setAdmins, setError]);
+  }, [setAdmins, setError]);
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +192,7 @@ function App() {
     setError(null);
     setNewAdminPassword(null);
     try {
-      const response = await activeService.addAdmin(trimmedUsername);
+      const response = await apiService.addAdmin(trimmedUsername);
       setNewAdminUsername('');
       if (response.data.password) {
         setNewAdminPassword(response.data.password);
@@ -218,7 +214,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      await activeService.removeAdmin(username);
+      await apiService.removeAdmin(username);
       await fetchAdmins();
     } catch (err: unknown) {
       setError(
@@ -248,10 +244,8 @@ function App() {
       updateApiBaseURL(normalizedHost);
     }
 
-    localStorage.setItem('demo_mode', isDemoMode.toString());
-
     try {
-      const response = await activeService.login(username, password);
+      const response = await apiService.login(username, password);
       if (response.data.otp_verified) {
         setPage('QrValidate');
       } else if (response.data.otp_auth_url) {
@@ -278,7 +272,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      await activeService.createInviteCodes(inviteCount);
+      await apiService.createInviteCodes(inviteCount);
       await fetchInvites();
     } catch (err: unknown) {
       setError(
@@ -294,7 +288,7 @@ function App() {
   const handleDisableInvite = async (code: string) => {
     setError(null);
     try {
-      await activeService.disableInviteCode(code);
+      await apiService.disableInviteCode(code);
       await fetchInvites();
     } catch (err: unknown) {
       setError(
@@ -309,7 +303,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await activeService.verifyOtp(otpToken);
+      const response = await apiService.verifyOtp(otpToken);
       if (!response.data.otp_verified) {
         setError('OTP Verification failed');
         return;
@@ -332,7 +326,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await activeService.validateOtp(otpToken);
+      const response = await apiService.validateOtp(otpToken);
       if (!response.data.otp_valid) {
         setError('OTP Validation failed');
         return;
@@ -458,38 +452,16 @@ function App() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg mb-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Demo Mode</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Run locally without a backend
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsDemoMode(!isDemoMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ring-2 ring-offset-2 ring-transparent focus:ring-blue-500 ${isDemoMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                role="switch"
-                aria-checked={isDemoMode}
-                aria-label="Demo Mode"
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDemoMode ? 'translate-x-6' : 'translate-x-1'}`}
-                />
-              </button>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Backend API Host (e.g. https://api.example.com)"
+                className="w-full p-3.5 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
+                value={apiHost}
+                onChange={(e) => setApiHost(e.target.value)}
+              />
             </div>
-            {!isDemoMode && (
-              <div className="relative">
-                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Backend API Host (e.g. https://api.example.com)"
-                  className="w-full p-3.5 pl-10 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden transition-all"
-                  value={apiHost}
-                  onChange={(e) => setApiHost(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <input
                 type="text"
@@ -519,8 +491,7 @@ function App() {
               disabled={loading}
               className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
             >
-              {isDemoMode && <Zap className="w-5 h-5" />}
-              {loading ? 'Logging in...' : isDemoMode ? 'Start Demo' : 'Login'}
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
         </div>
