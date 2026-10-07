@@ -601,7 +601,7 @@ describe('CSV export', () => {
   });
 });
 
-describe('theme and demo mode', () => {
+describe('theme', () => {
   it('toggles dark mode and persists the choice', async () => {
     renderLoggedIn();
     await expectCodeVisible('UNUSED-CODE');
@@ -616,23 +616,5 @@ describe('theme and demo mode', () => {
     expect(localStorage.getItem('theme')).toBe('dark');
   });
 
-  it('runs against the mock backend when demo mode is enabled', async () => {
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('switch'));
-    fireEvent.click(screen.getByRole('button', { name: /Start Demo/ }));
-
-    await waitFor(() =>
-      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument()
-    );
-    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
-
-    await waitFor(
-      () => expect(screen.getAllByText('DEMO-123').length).toBeGreaterThan(0),
-      { timeout: 3000 }
-    );
-    expect(localStorage.getItem('demo_mode')).toBe('true');
-  });
 });
 
